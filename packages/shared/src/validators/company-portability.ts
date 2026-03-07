@@ -32,11 +32,11 @@ export const portabilityAgentManifestEntrySchema = z.object({
   capabilities: z.string().nullable(),
   reportsToSlug: z.string().min(1).nullable(),
   adapterType: z.string().min(1),
-  adapterConfig: z.record(z.unknown()),
-  runtimeConfig: z.record(z.unknown()),
-  permissions: z.record(z.unknown()),
+  adapterConfig: z.record(z.string(), z.unknown()),
+  runtimeConfig: z.record(z.string(), z.unknown()),
+  permissions: z.record(z.string(), z.unknown()),
   budgetMonthlyCents: z.number().int().nonnegative(),
-  metadata: z.record(z.unknown()).nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
 });
 
 export const portabilityManifestSchema = z.object({
@@ -61,7 +61,7 @@ export const portabilitySourceSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("inline"),
     manifest: portabilityManifestSchema,
-    files: z.record(z.string()),
+    files: z.record(z.string(), z.string()),
   }),
   z.object({
     type: z.literal("url"),

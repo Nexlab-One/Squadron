@@ -10,6 +10,10 @@ export { approvalService } from "./approvals.js";
 export { secretService } from "./secrets.js";
 export { costService } from "./costs.js";
 export { heartbeatService } from "./heartbeat.js";
+export {
+  deliverWorkAvailable,
+  WORKABLE_STATUSES_FOR_WEBHOOK,
+} from "./agent-webhook.js";
 export { dashboardService } from "./dashboard.js";
 export { sidebarBadgeService } from "./sidebar-badges.js";
 export { accessService } from "./access.js";

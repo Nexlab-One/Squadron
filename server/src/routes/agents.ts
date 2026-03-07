@@ -1308,6 +1308,25 @@ export function agentRoutes(db: Db) {
     res.json(liveRuns);
   });
 
+  router.patch("/heartbeat-runs/:runId", async (req, res) => {
+    if (req.actor.type !== "agent" || !req.actor.agentId) {
+      res.status(403).json({ error: "Agent authentication required" });
+      return;
+    }
+    const runId = req.params.runId as string;
+    const run = await heartbeat.getRun(runId);
+    if (!run) {
+      res.status(404).json({ error: "Heartbeat run not found" });
+      return;
+    }
+    if (run.agentId !== req.actor.agentId || run.companyId !== req.actor.companyId) {
+      res.status(403).json({ error: "Cannot touch another agent's run" });
+      return;
+    }
+    await heartbeat.touchRun(runId);
+    res.status(204).send();
+  });
+
   router.post("/heartbeat-runs/:runId/cancel", async (req, res) => {
     assertBoard(req);
     const runId = req.params.runId as string;

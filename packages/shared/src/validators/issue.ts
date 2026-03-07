@@ -3,7 +3,7 @@ import { ISSUE_PRIORITIES, ISSUE_STATUSES } from "../constants.js";
 
 export const issueAssigneeAdapterOverridesSchema = z
   .object({
-    adapterConfig: z.record(z.unknown()).optional(),
+    adapterConfig: z.record(z.string(), z.unknown()).optional(),
     useProjectWorkspace: z.boolean().optional(),
   })
   .strict();

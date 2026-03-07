@@ -11,13 +11,14 @@ export const agentPermissionsSchema = z.object({
   canCreateAgents: z.boolean().optional().default(false),
 });
 
-const adapterConfigSchema = z.record(z.unknown()).superRefine((value, ctx) => {
+const adapterConfigSchema = z.record(z.string(), z.unknown()).superRefine((value, ctx) => {
   const envValue = value.env;
   if (envValue === undefined) return;
   const parsed = envConfigSchema.safeParse(envValue);
   if (!parsed.success) {
-    ctx.addIssue({
+    ctx.issues.push({
       code: z.ZodIssueCode.custom,
+      input: envValue,
       message: "adapterConfig.env must be a map of valid env bindings",
       path: ["env"],
     });
@@ -33,10 +34,10 @@ export const createAgentSchema = z.object({
   capabilities: z.string().optional().nullable(),
   adapterType: z.enum(AGENT_ADAPTER_TYPES).optional().default("process"),
   adapterConfig: adapterConfigSchema.optional().default({}),
-  runtimeConfig: z.record(z.unknown()).optional().default({}),
+  runtimeConfig: z.record(z.string(), z.unknown()).optional().default({}),
   budgetMonthlyCents: z.number().int().nonnegative().optional().default(0),
   permissions: agentPermissionsSchema.optional(),
-  metadata: z.record(z.unknown()).optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 export type CreateAgent = z.infer<typeof createAgentSchema>;
@@ -74,9 +75,9 @@ export type CreateAgentKey = z.infer<typeof createAgentKeySchema>;
 
 export const wakeAgentSchema = z.object({
   source: z.enum(["timer", "assignment", "on_demand", "automation"]).optional().default("on_demand"),
-  triggerDetail: z.enum(["manual", "ping", "callback", "system"]).optional(),
+  triggerDetail: z.enum(["manual", "ping", "callback", "system", "external_agent_checkout"]).optional(),
   reason: z.string().optional().nullable(),
-  payload: z.record(z.unknown()).optional().nullable(),
+  payload: z.record(z.string(), z.unknown()).optional().nullable(),
   idempotencyKey: z.string().optional().nullable(),
 });
 

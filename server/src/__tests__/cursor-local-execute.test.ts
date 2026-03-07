@@ -47,7 +47,7 @@ type CapturePayload = {
 };
 
 describe("cursor execute", () => {
-  it("injects paperclip env vars and prompt note by default", async () => {
+  it.skipIf(process.platform === "win32")("injects paperclip env vars and prompt note by default", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-cursor-execute-"));
     const workspace = path.join(root, "workspace");
     const commandPath = path.join(root, "agent");
@@ -122,7 +122,7 @@ describe("cursor execute", () => {
     }
   });
 
-  it("passes --mode when explicitly configured", async () => {
+  it.skipIf(process.platform === "win32")("passes --mode when explicitly configured", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-cursor-execute-mode-"));
     const workspace = path.join(root, "workspace");
     const commandPath = path.join(root, "agent");

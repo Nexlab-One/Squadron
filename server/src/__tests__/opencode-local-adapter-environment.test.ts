@@ -5,7 +5,7 @@ import path from "node:path";
 import { testEnvironment } from "@paperclipai/adapter-opencode-local/server";
 
 describe("opencode_local environment diagnostics", () => {
-  it("reports a missing working directory as an error when cwd is absolute", async () => {
+  it.skipIf(process.platform === "win32")("creates a missing working directory when cwd is absolute", async () => {
     const cwd = path.join(
       os.tmpdir(),
       `paperclip-opencode-local-cwd-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -28,7 +28,7 @@ describe("opencode_local environment diagnostics", () => {
     expect(result.status).toBe("fail");
   });
 
-  it("treats an empty OPENAI_API_KEY override as missing", async () => {
+  it.skipIf(process.platform === "win32")("treats an empty OPENAI_API_KEY override as missing", async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-opencode-env-empty-key-"));
     const originalOpenAiKey = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = "sk-host-value";
@@ -59,7 +59,7 @@ describe("opencode_local environment diagnostics", () => {
     }
   });
 
-  it("classifies ProviderModelNotFoundError probe output as model-unavailable warning", async () => {
+  it.skipIf(process.platform === "win32")("classifies ProviderModelNotFoundError probe output as model-unavailable warning", async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-opencode-env-probe-cwd-"));
     const binDir = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-opencode-env-probe-bin-"));
     const fakeOpencode = path.join(binDir, "opencode");

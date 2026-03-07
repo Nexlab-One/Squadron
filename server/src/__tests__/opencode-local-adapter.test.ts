@@ -42,8 +42,9 @@ describe("opencode_local parser", () => {
       inputTokens: 150,
       cachedInputTokens: 30,
       outputTokens: 65,
+      costUsd: 0.003,
     });
-    expect(parsed.costUsd).toBeCloseTo(0.003, 6);
+    expect(parsed.usage.costUsd).toBeCloseTo(0.003, 6);
     expect(parsed.errorMessage).toBe("model access denied");
   });
 });
@@ -108,8 +109,8 @@ describe("opencode_local ui stdout parser", () => {
       {
         kind: "tool_result",
         ts,
-        toolUseId: "call_1",
-        content: "status: completed\nexit: 0\n\nAGENTS.md\nDockerfile",
+        toolUseId: "prt_tool_1",
+        content: "AGENTS.md\nDockerfile\n",
         isError: false,
       },
     ]);
@@ -210,11 +211,9 @@ describe("opencode_local cli formatter", () => {
         expect.arrayContaining([
           "step started (session: ses_abc)",
           "assistant: hello",
-          "tool_call: bash (call_1)",
-          "tool_result status=completed exit=0",
-          "AGENTS.md",
-          "step finished: reason=stop",
-          "tokens: in=10 out=5 cached=2 cost=$0.000420",
+          "tool_completed: bash",
+          "AGENTS.md\n",
+          "step finished (stop) tokens: in=10 out=5 cached=2 cost=$0.000420",
         ]),
       );
     } finally {

@@ -15,12 +15,14 @@ import { validate } from "../middleware/validate.js";
 import {
   accessService,
   agentService,
+  deliverWorkAvailable,
   goalService,
   heartbeatService,
   issueApprovalService,
   issueService,
   logActivity,
   projectService,
+  WORKABLE_STATUSES_FOR_WEBHOOK,
 } from "../services/index.js";
 import { logger } from "../middleware/logger.js";
 import { forbidden, HttpError, unauthorized } from "../errors.js";
@@ -452,6 +454,14 @@ export function issueRoutes(db: Db, storage: StorageService) {
         })
         .catch((err) => logger.warn({ err, issueId: issue.id }, "failed to wake assignee on issue create"));
     }
+    if (
+      issue.assigneeAgentId &&
+      (WORKABLE_STATUSES_FOR_WEBHOOK as readonly string[]).includes(issue.status)
+    ) {
+      void deliverWorkAvailable(issue.assigneeAgentId, issue.companyId, issue.id, db).catch((err) =>
+        logger.warn({ err, issueId: issue.id, agentId: issue.assigneeAgentId }, "work_available webhook delivery failed"),
+      );
+    }
 
     res.status(201).json(issue);
   });
@@ -518,6 +528,28 @@ export function issueRoutes(db: Db, storage: StorageService) {
     if (!issue) {
       res.status(404).json({ error: "Issue not found" });
       return;
+    }
+
+    if (
+      (updateFields.status === "done" || updateFields.status === "cancelled") &&
+      existing.executionRunId
+    ) {
+      void heartbeat
+        .finishRunForIssueClosure(existing.executionRunId, updateFields.status)
+        .catch((err) =>
+          logger.warn(
+            { err, runId: existing.executionRunId },
+            "finish run for issue closure failed",
+          ),
+        );
+    }
+    if (
+      issue.assigneeAgentId &&
+      (WORKABLE_STATUSES_FOR_WEBHOOK as readonly string[]).includes(issue.status)
+    ) {
+      void deliverWorkAvailable(issue.assigneeAgentId, issue.companyId, issue.id, db).catch((err) =>
+        logger.warn({ err, issueId: issue.id, agentId: issue.assigneeAgentId }, "work_available webhook delivery failed"),
+      );
     }
 
     // Build activity details with previous values for changed fields
@@ -687,6 +719,18 @@ export function issueRoutes(db: Db, storage: StorageService) {
 
     const checkoutRunId = requireAgentRunId(req, res);
     if (req.actor.type === "agent" && !checkoutRunId) return;
+    if (checkoutRunId) {
+      const ensuredRun = await heartbeat.ensureExternalRunForCheckout(
+        issue.companyId,
+        req.body.agentId,
+        checkoutRunId,
+        id,
+      );
+      if (!ensuredRun) {
+        res.status(400).json({ error: "Invalid run id", details: "Run id must be a valid UUID" });
+        return;
+      }
+    }
     const updated = await svc.checkout(id, req.body.agentId, req.body.expectedStatuses, checkoutRunId);
     const actor = getActorInfo(req);
 

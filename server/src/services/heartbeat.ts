@@ -304,6 +304,10 @@ function runTaskKey(run: typeof heartbeatRuns.$inferSelect) {
   return deriveTaskKey(run.contextSnapshot as Record<string, unknown> | null, null);
 }
 
+export function isExternalRun(run: { triggerDetail: string | null }): boolean {
+  return run.triggerDetail === "external_agent_checkout";
+}
+
 function isSameTaskScope(left: string | null, right: string | null) {
   return (left ?? null) === (right ?? null);
 }
@@ -421,6 +425,62 @@ export function heartbeatService(db: Db) {
       .from(heartbeatRuns)
       .where(eq(heartbeatRuns.id, runId))
       .then((rows) => rows[0] ?? null);
+  }
+
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  async function touchRun(runId: string): Promise<boolean> {
+    const run = await getRun(runId);
+    if (!run) return false;
+    await db
+      .update(heartbeatRuns)
+      .set({ updatedAt: new Date() })
+      .where(eq(heartbeatRuns.id, runId));
+    return true;
+  }
+
+  async function finishRunForIssueClosure(
+    runId: string,
+    issueStatus: "done" | "cancelled",
+  ): Promise<(typeof heartbeatRuns.$inferSelect) | null> {
+    const run = await getRun(runId);
+    if (!run) return null;
+    if (run.status !== "queued" && run.status !== "running") return run;
+    const runStatus = issueStatus === "done" ? "succeeded" : "cancelled";
+    const updated = await setRunStatus(runId, runStatus, {
+      finishedAt: new Date(),
+      error: null,
+      errorCode: null,
+    });
+    return updated;
+  }
+
+  async function ensureExternalRunForCheckout(
+    companyId: string,
+    agentId: string,
+    runId: string,
+    issueId: string,
+  ): Promise<(typeof heartbeatRuns.$inferSelect) | null> {
+    if (!UUID_REGEX.test(runId)) return null;
+    const existing = await getRun(runId);
+    if (existing) return existing;
+    const now = new Date();
+    const [inserted] = await db
+      .insert(heartbeatRuns)
+      .values({
+        id: runId,
+        companyId,
+        agentId,
+        invocationSource: "on_demand",
+        triggerDetail: "external_agent_checkout",
+        status: "running",
+        contextSnapshot: { issueId },
+        startedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return inserted ?? null;
   }
 
   async function getRuntimeState(agentId: string) {
@@ -908,6 +968,7 @@ export function heartbeatService(db: Db) {
 
     for (const run of activeRuns) {
       if (runningProcesses.has(run.id)) continue;
+      if (isExternalRun(run)) continue;
 
       // Apply staleness threshold to avoid false positives
       if (staleThresholdMs > 0) {
@@ -2086,6 +2147,12 @@ export function heartbeatService(db: Db) {
     },
 
     getRun,
+
+    ensureExternalRunForCheckout,
+
+    finishRunForIssueClosure,
+
+    touchRun,
 
     getRuntimeState: async (agentId: string) => {
       const state = await getRuntimeState(agentId);
