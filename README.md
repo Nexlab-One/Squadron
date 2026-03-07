@@ -1,7 +1,7 @@
 **Squadron** is a fork of [Paperclip](https://github.com/paperclipai/paperclip). We pull updates from upstream; the product you run is Squadron.
 
 <p align="center">
-  <img src="doc/assets/header.png" alt="Squadron — runs your business" width="720" />
+  <img src="doc/assets/header.jpg" alt="Squadron — runs your business" width="720" />
 </p>
 
 <p align="center">
@@ -274,7 +274,7 @@ MIT &copy; 2026 Squadron (fork of Paperclip)
 ---
 
 <p align="center">
-  <img src="doc/assets/footer.jpg" alt="" width="720" />
+  <img src="doc/assets/footer.png" alt="" width="720" />
 </p>
 
 <p align="center">
