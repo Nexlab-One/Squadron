@@ -763,7 +763,7 @@ export function OnboardingWizard() {
                           <label className="text-xs text-muted-foreground">
                             Working directory
                           </label>
-                          <HintIcon text="Paperclip works best if you create a new folder for your agents to keep their memories and stay organized. Create a new folder and put the path here." />
+                          <HintIcon text="Squadron works best if you create a new folder for your agents to keep their memories and stay organized. Create a new folder and put the path here." />
                         </div>
                         <div className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
                           <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -805,7 +805,7 @@ export function OnboardingWizard() {
                             </button>
                           </PopoverTrigger>
                           <PopoverContent
-                            className="w-[var(--radix-popover-trigger-width)] p-1"
+                            className="w-(--radix-popover-trigger-width) p-1"
                             align="start"
                           >
                             <input
@@ -1218,7 +1218,7 @@ function AdapterEnvironmentResult({
         {result.checks.map((check, idx) => (
           <div
             key={`${check.code}-${idx}`}
-            className="leading-relaxed break-words"
+            className="leading-relaxed wrap-break-word"
           >
             <span className="font-medium uppercase tracking-wide opacity-80">
               {check.level}
@@ -1231,7 +1231,7 @@ function AdapterEnvironmentResult({
               </span>
             )}
             {check.hint && (
-              <span className="block opacity-90 break-words">
+              <span className="block opacity-90 wrap-break-word">
                 Hint: {check.hint}
               </span>
             )}

@@ -8,7 +8,7 @@ Use the copy from the website in cases where we need some.
 ## Outline
 
 - image header up top
-- Paperclip
+- Squadron
 - Manage autonomous AI Businesses
 - The open-source AI-agent orchestrator teams of agents that run companies
 
@@ -24,7 +24,7 @@ It looks like a task manager but has specialized skills and agent coordination
 
 **It's high taste, and feels good to use**
 
-# Paperclip is right for you if:
+# Squadron is right for you if:
 
 - You want to build autonomous companies
 - You want to coordinate many different types agents (OpenClaw, Codex, Claude, Cursor, etc.) to collaborate towards a common goal
@@ -36,7 +36,7 @@ It looks like a task manager but has specialized skills and agent coordination
 
 # What is not
 
-Paperclip is not:
+Squadron is not:
 
 - a code review tool
 - opinionated about what agent you use

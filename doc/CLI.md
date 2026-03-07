@@ -1,6 +1,6 @@
 # CLI Reference
 
-Paperclip CLI now supports both:
+Squadron CLI (invoked as `paperclipai`) supports both:
 
 - instance setup/diagnostics (`onboard`, `doctor`, `configure`, `env`, `allowed-hostname`)
 - control-plane client operations (issues, approvals, agents, activity, dashboard)
@@ -122,7 +122,7 @@ pnpm paperclipai agent local-cli <agent-id-or-shortname> --company-id <company-i
 `agent local-cli` is the quickest way to run local Claude/Codex manually as a Paperclip agent:
 
 - creates a new long-lived agent API key
-- installs missing Paperclip skills into `~/.codex/skills` and `~/.claude/skills`
+- installs missing Squadron skills into `~/.codex/skills` and `~/.claude/skills`
 - prints `export ...` lines for `PAPERCLIP_API_URL`, `PAPERCLIP_COMPANY_ID`, `PAPERCLIP_AGENT_ID`, and `PAPERCLIP_API_KEY`
 
 Example for shortname-based local setup:

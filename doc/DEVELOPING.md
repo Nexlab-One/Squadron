@@ -1,6 +1,6 @@
 # Developing
 
-This project can run fully in local dev without setting up PostgreSQL manually.
+Squadron is a fork of [Paperclip](https://github.com/paperclipai/paperclip). This project can run fully in local dev without setting up PostgreSQL manually.
 
 ## Deployment Modes
 
@@ -69,7 +69,7 @@ pnpm paperclipai run
 
 ## Docker Quickstart (No local Node install)
 
-Build and run Paperclip in Docker:
+Build and run Squadron in Docker:
 
 ```sh
 docker build -t paperclip-local .
@@ -118,7 +118,7 @@ pnpm paperclipai configure --section storage
 
 ## Default Agent Workspaces
 
-When a local agent run has no resolved project/session workspace, Paperclip falls back to an agent home workspace under the instance root:
+When a local agent run has no resolved project/session workspace, Squadron falls back to an agent home workspace under the instance root:
 
 - `~/.paperclip/instances/default/workspaces/<agent-id>`
 
@@ -153,7 +153,7 @@ If you set `DATABASE_URL`, the server will use that instead of embedded PostgreS
 
 ## Automatic DB Backups
 
-Paperclip can run automatic DB backups on a timer. Defaults:
+Squadron can run automatic DB backups on a timer. Defaults:
 
 - enabled
 - every 60 minutes
@@ -225,7 +225,7 @@ Default behavior:
 
 ## CLI Client Operations
 
-Paperclip CLI now includes client-side control-plane commands in addition to setup commands.
+Squadron CLI (invoked as `paperclipai`) includes client-side control-plane commands in addition to setup commands.
 
 Quick examples:
 
@@ -321,4 +321,22 @@ Networking behavior for this smoke script:
 
 - auto-detects and prints a Paperclip host URL reachable from inside OpenClaw Docker
 - default container-side host alias is `host.docker.internal` (override with `PAPERCLIP_HOST_FROM_CONTAINER` / `PAPERCLIP_HOST_PORT`)
-- if Paperclip rejects container hostnames in authenticated/private mode, allow `host.docker.internal` via `pnpm paperclipai allowed-hostname host.docker.internal` and restart Paperclip
+- if Squadron rejects container hostnames in authenticated/private mode, allow `host.docker.internal` via `pnpm paperclipai allowed-hostname host.docker.internal` and restart the server
+
+## Syncing with upstream Paperclip
+
+To pull improvements from the upstream Paperclip repository:
+
+1. **One-time:** add the upstream remote (if not already added):
+   ```sh
+   git remote add upstream https://github.com/paperclipai/paperclip.git
+   ```
+
+2. **When you want to sync:** fetch and merge (or rebase) from upstream:
+   ```sh
+   git fetch upstream
+   git merge upstream/master
+   ```
+   Use `upstream/main` if upstream’s default branch is `main`. Resolve conflicts keeping Squadron branding and Squadron-specific changes on our side; keep package names, env vars, and protocol identifiers from upstream.
+
+3. Optionally document your branch strategy (e.g. merge upstream into `master` periodically).

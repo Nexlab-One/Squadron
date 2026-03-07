@@ -1,13 +1,13 @@
 ---
 title: Adapters Overview
-summary: What adapters are and how they connect agents to Paperclip
+summary: What adapters are and how they connect agents to Squadron
 ---
 
 Adapters are the bridge between Paperclip's orchestration layer and agent runtimes. Each adapter knows how to invoke a specific type of AI agent and capture its results.
 
 ## How Adapters Work
 
-When a heartbeat fires, Paperclip:
+When a heartbeat fires, Squadron:
 
 1. Looks up the agent's `adapterType` and `adapterConfig`
 2. Calls the adapter's `execute()` function with the execution context

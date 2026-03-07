@@ -1,12 +1,12 @@
-# Paperclip Specification
+# Squadron Specification
 
-Target specification for the Paperclip control plane. Living document — updated incrementally during spec interviews.
+Squadron is a fork of [Paperclip](https://github.com/paperclipai/paperclip). Target specification for the Squadron control plane. Living document — updated incrementally during spec interviews.
 
 ---
 
 ## 1. Company Model [DRAFT]
 
-A Company is a first-order object. One Paperclip instance runs multiple Companies. A Company does not have a standalone "goal" field — its direction is defined by its set of Initiatives (see Task Hierarchy Mapping).
+A Company is a first-order object. One Squadron instance runs multiple Companies. A Company does not have a standalone "goal" field — its direction is defined by its set of Initiatives (see Task Hierarchy Mapping).
 
 ### Fields (Draft)
 

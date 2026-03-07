@@ -1,6 +1,6 @@
 # Database
 
-Paperclip uses PostgreSQL via [Drizzle ORM](https://orm.drizzle.team/). There are three ways to run the database, from simplest to most production-ready.
+Squadron uses PostgreSQL via [Drizzle ORM](https://orm.drizzle.team/). There are three ways to run the database, from simplest to most production-ready.
 
 ## 1. Embedded PostgreSQL — zero config
 
@@ -125,7 +125,7 @@ Your Drizzle schema (`packages/db/src/schema/`) stays the same regardless of mod
 
 ## Secret storage
 
-Paperclip stores secret metadata and versions in:
+Squadron stores secret metadata and versions in:
 
 - `company_secrets`
 - `company_secret_versions`

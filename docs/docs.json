@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "Paperclip",
-  "description": "The control plane for autonomous AI companies",
+  "name": "Squadron",
+  "description": "Control plane for autonomous AI companies (Squadron — fork of Paperclip)",
   "theme": "mint",
   "colors": {
     "primary": "#2563EB",
@@ -27,7 +27,7 @@
           {
             "group": "Introduction",
             "pages": [
-              "start/what-is-paperclip",
+              "start/what-is-squadron",
               "start/quickstart",
               "start/core-concepts",
               "start/architecture"

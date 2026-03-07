@@ -1,5 +1,7 @@
 # Contributing Guide
 
+Squadron is a fork of [Paperclip](https://github.com/paperclipai/paperclip). We follow the same contribution flow.
+
 Thanks for wanting to contribute!
 
 We really appreciate both small fixes and thoughtful larger changes.

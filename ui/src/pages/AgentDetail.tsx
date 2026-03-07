@@ -940,7 +940,7 @@ function ConfigSummary({
         {promptText && (
           <div className="border border-border rounded-lg p-4 space-y-2">
             <h4 className="text-xs text-muted-foreground font-medium">Prompt Template</h4>
-            <pre className="text-xs text-muted-foreground line-clamp-[12] font-mono whitespace-pre-wrap">{promptText}</pre>
+            <pre className="text-xs text-muted-foreground line-clamp-12 font-mono whitespace-pre-wrap">{promptText}</pre>
           </div>
         )}
       </div>
@@ -2320,13 +2320,13 @@ function LogViewer({ run, adapterType }: { run: HeartbeatRun; adapterType: strin
                   tokens in={formatTokens(entry.inputTokens)} out={formatTokens(entry.outputTokens)} cached={formatTokens(entry.cachedTokens)} cost=${entry.costUsd.toFixed(6)}
                 </span>
                 {(entry.subtype || entry.isError || entry.errors.length > 0) && (
-                  <div className={cn(expandCell, "text-red-600 dark:text-red-300 whitespace-pre-wrap break-words")}>
+                  <div className={cn(expandCell, "text-red-600 dark:text-red-300 whitespace-pre-wrap wrap-break-word")}>
                     subtype={entry.subtype || "unknown"} is_error={entry.isError ? "true" : "false"}
                     {entry.errors.length > 0 ? ` errors=${entry.errors.join(" | ")}` : ""}
                   </div>
                 )}
                 {entry.text && (
-                  <div className={cn(expandCell, "whitespace-pre-wrap break-words text-neutral-800 dark:text-neutral-100")}>{entry.text}</div>
+                  <div className={cn(expandCell, "whitespace-pre-wrap wrap-break-word text-neutral-800 dark:text-neutral-100")}>{entry.text}</div>
                 )}
               </div>
             );
@@ -2509,7 +2509,7 @@ function KeysTab({ agentId, companyId }: { agentId: string; companyId?: string }
           Create API Key
         </h3>
         <p className="text-xs text-muted-foreground">
-          API keys allow this agent to authenticate calls to the Paperclip server.
+          API keys allow this agent to authenticate calls to the Squadron server.
         </p>
         <div className="flex items-center gap-2">
           <Input

@@ -28,7 +28,7 @@ Codex uses `previous_response_id` for session continuity. The adapter serializes
 
 ## Skills Injection
 
-The adapter symlinks Paperclip skills into the global Codex skills directory (`~/.codex/skills`). Existing user skills are not overwritten.
+The adapter symlinks Squadron skills into the global Codex skills directory (`~/.codex/skills`). Existing user skills are not overwritten.
 
 For manual local CLI usage outside heartbeat runs (for example running as `codexcoder` directly), use:
 

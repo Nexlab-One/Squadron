@@ -1,12 +1,13 @@
 {
   "name": "paperclipai",
   "version": "0.2.7",
-  "description": "Paperclip CLI — orchestrate AI agent teams to run a business",
+  "description": "Squadron CLI — orchestrate AI agent teams to run a business (fork of Paperclip)",
   "type": "module",
   "bin": {
     "paperclipai": "./dist/index.js"
   },
   "keywords": [
+    "squadron",
     "paperclip",
     "ai",
     "agents",
