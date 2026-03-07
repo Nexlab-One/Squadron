@@ -80,7 +80,7 @@ export function parseOpenCodeJsonl(stdout: string) {
   return {
     sessionId,
     summary: messages.join("\n\n").trim(),
-    usage,
+    usage: { ...usage, costUsd },
     costUsd,
     errorMessage: errors.length > 0 ? errors.join("\n") : null,
   };

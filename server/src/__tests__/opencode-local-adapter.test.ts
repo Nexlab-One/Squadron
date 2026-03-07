@@ -109,8 +109,8 @@ describe("opencode_local ui stdout parser", () => {
       {
         kind: "tool_result",
         ts,
-        toolUseId: "prt_tool_1",
-        content: "AGENTS.md\nDockerfile\n",
+        toolUseId: "call_1",
+        content: "status: completed\nexit: 0\n\nAGENTS.md\nDockerfile",
         isError: false,
       },
     ]);
@@ -211,9 +211,11 @@ describe("opencode_local cli formatter", () => {
         expect.arrayContaining([
           "step started (session: ses_abc)",
           "assistant: hello",
-          "tool_completed: bash",
-          "AGENTS.md\n",
-          "step finished (stop) tokens: in=10 out=5 cached=2 cost=$0.000420",
+          "tool_call: bash (call_1)",
+          "tool_result status=completed exit=0",
+          "AGENTS.md",
+          "step finished: reason=stop",
+          "tokens: in=10 out=5 cached=2 cost=$0.000420",
         ]),
       );
     } finally {
