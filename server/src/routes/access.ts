@@ -27,7 +27,8 @@ import {
   conflict,
   notFound,
   unauthorized,
-  badRequest
+  badRequest,
+  unprocessable
 } from "../errors.js";
 import { logger } from "../middleware/logger.js";
 import { validate } from "../middleware/validate.js";
@@ -36,8 +37,11 @@ import {
   agentService,
   deduplicateAgentName,
   logActivity,
-  notifyHireApproved
+  notifyHireApproved,
+  secretService
 } from "../services/index.js";
+import { assertAdapterTypeAllowed, validateAdapterConfig } from "../adapters/index.js";
+import { redactEventPayload } from "../redaction.js";
 import { assertCompanyAccess } from "./authz.js";
 import {
   claimBoardOwnership,
@@ -111,6 +115,11 @@ function readSkillMarkdown(skillName: string): string | null {
 
 function toJoinRequestResponse(row: typeof joinRequests.$inferSelect) {
   const { claimSecretHash: _claimSecretHash, ...safe } = row;
+  if (safe.agentDefaultsPayload && typeof safe.agentDefaultsPayload === "object") {
+    safe.agentDefaultsPayload = redactEventPayload(
+      safe.agentDefaultsPayload as Record<string, unknown>,
+    ) as typeof safe.agentDefaultsPayload;
+  }
   return safe;
 }
 
@@ -1497,6 +1506,16 @@ async function probeInviteResolutionTarget(
   }
 }
 
+/** Optional: PAPERCLIP_JOIN_ALLOWED_ADAPTER_TYPES restricts which adapter types can be used for agent join requests. Comma-separated; omit or empty means all registry types allowed. */
+function getJoinAllowedAdapterTypes(): string[] | null {
+  const raw = process.env.PAPERCLIP_JOIN_ALLOWED_ADAPTER_TYPES;
+  if (typeof raw !== "string" || raw.trim().length === 0) return null;
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function accessRoutes(
   db: Db,
   opts: {
@@ -1509,6 +1528,7 @@ export function accessRoutes(
   const router = Router();
   const access = accessService(db);
   const agents = agentService(db);
+  const secretsSvc = secretService(db);
 
   async function assertInstanceAdmin(req: Request) {
     if (req.actor.type !== "board") throw unauthorized();
@@ -1874,6 +1894,18 @@ export function accessRoutes(
       }
 
       const adapterType = req.body.adapterType ?? null;
+      if (requestType === "agent") {
+        if (!adapterType || typeof adapterType !== "string" || adapterType.trim() === "") {
+          throw unprocessable("adapterType is required for agent join requests");
+        }
+        assertAdapterTypeAllowed(adapterType);
+        const joinAllowed = getJoinAllowedAdapterTypes();
+        if (joinAllowed !== null && joinAllowed.length > 0 && !joinAllowed.includes(adapterType)) {
+          throw unprocessable(
+            `This adapter type is not allowed for self-join. Allowed for join: ${joinAllowed.join(", ")}`,
+          );
+        }
+      }
       if (
         inviteAlreadyAccepted &&
         !canReplayOpenClawInviteAccept({
@@ -1977,6 +2009,29 @@ export function accessRoutes(
         );
       }
 
+      let agentDefaultsPayloadToStore: Record<string, unknown> | null =
+        requestType === "agent" ? joinDefaults.normalized : null;
+      if (
+        requestType === "agent" &&
+        adapterType &&
+        adapterType !== "openclaw"
+      ) {
+        const raw = isPlainObject(replayMergedDefaults)
+          ? (replayMergedDefaults as Record<string, unknown>)
+          : isPlainObject(req.body.agentDefaultsPayload)
+            ? (req.body.agentDefaultsPayload as Record<string, unknown>)
+            : {};
+        agentDefaultsPayloadToStore =
+          await secretsSvc.normalizeAdapterConfigForPersistence(companyId, raw, {
+            strictMode: false,
+          });
+        await validateAdapterConfig(adapterType, agentDefaultsPayloadToStore, {
+          companyId,
+          resolveAdapterConfigForRuntime: (cid, cfg) =>
+            secretsSvc.resolveAdapterConfigForRuntime(cid, cfg),
+        });
+      }
+
       const claimSecret =
         requestType === "agent" && !inviteAlreadyAccepted
           ? createClaimSecret()
@@ -2022,7 +2077,7 @@ export function accessRoutes(
                     ? req.body.capabilities ?? null
                     : null,
                 agentDefaultsPayload:
-                  requestType === "agent" ? joinDefaults.normalized : null,
+                  requestType === "agent" ? agentDefaultsPayloadToStore : null,
                 claimSecretHash,
                 claimSecretExpiresAt
               })
@@ -2048,7 +2103,7 @@ export function accessRoutes(
                   : null,
               adapterType: requestType === "agent" ? adapterType : null,
               agentDefaultsPayload:
-                requestType === "agent" ? joinDefaults.normalized : null,
+                requestType === "agent" ? agentDefaultsPayloadToStore : null,
               updatedAt: new Date()
             })
             .where(eq(joinRequests.id, replayJoinRequestId as string))
@@ -2321,6 +2376,30 @@ export function accessRoutes(
           req.actor.userId ?? null
         );
       } else {
+        const adapterType = existing.adapterType ?? "process";
+        assertAdapterTypeAllowed(adapterType);
+        const joinAllowed = getJoinAllowedAdapterTypes();
+        if (joinAllowed !== null && joinAllowed.length > 0 && !joinAllowed.includes(adapterType)) {
+          throw unprocessable(
+            `This adapter type is not allowed for self-join. Allowed for join: ${joinAllowed.join(", ")}`,
+          );
+        }
+
+        const rawConfig =
+          existing.agentDefaultsPayload &&
+          typeof existing.agentDefaultsPayload === "object"
+            ? (existing.agentDefaultsPayload as Record<string, unknown>)
+            : {};
+        const normalizedAdapterConfig =
+          await secretsSvc.normalizeAdapterConfigForPersistence(companyId, rawConfig, {
+            strictMode: false,
+          });
+        await validateAdapterConfig(adapterType, normalizedAdapterConfig, {
+          companyId,
+          resolveAdapterConfigForRuntime: (cid, cfg) =>
+            secretsSvc.resolveAdapterConfigForRuntime(cid, cfg),
+        });
+
         const existingAgents = await agents.list(companyId);
         const managerId = resolveJoinRequestAgentManagerId(existingAgents);
         if (!managerId) {
@@ -2345,12 +2424,8 @@ export function accessRoutes(
           status: "idle",
           reportsTo: managerId,
           capabilities: existing.capabilities ?? null,
-          adapterType: existing.adapterType ?? "process",
-          adapterConfig:
-            existing.agentDefaultsPayload &&
-            typeof existing.agentDefaultsPayload === "object"
-              ? (existing.agentDefaultsPayload as Record<string, unknown>)
-              : {},
+          adapterType,
+          adapterConfig: normalizedAdapterConfig,
           runtimeConfig: {},
           budgetMonthlyCents: 0,
           spentMonthlyCents: 0,

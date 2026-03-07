@@ -250,6 +250,14 @@ pnpm paperclipai dashboard get
 
 See full command reference in `doc/CLI.md`.
 
+## Optional security and join behaviour
+
+- **PAPERCLIP_PROCESS_ADAPTER_ALLOWLIST** — Comma-separated list of allowed command basenames for the process adapter. Omit or empty = no restriction.
+- **PAPERCLIP_PROCESS_ADAPTER_ALLOW_SHELL** — Set to `true` to allow shell invocations (e.g. `bash -c "..."`) via the process adapter; default is reject.
+- **PAPERCLIP_JOIN_ALLOWED_ADAPTER_TYPES** — Comma-separated list of adapter types allowed for agent self-join (invite accept). Omit or empty = all registry types allowed.
+
+Adapter types are registry-driven; see `doc/SPEC-implementation.md` (Adapter types, Process adapter).
+
 ## OpenClaw Invite Onboarding Endpoints
 
 Agent-oriented invite onboarding now exposes machine-readable API docs:

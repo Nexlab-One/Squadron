@@ -1,4 +1,4 @@
-import type { AgentAdapterType, JoinRequest } from "@paperclipai/shared";
+import type { JoinRequest } from "@paperclipai/shared";
 import { api } from "./client";
 
 type InviteSummary = {
@@ -21,7 +21,7 @@ type AcceptInviteInput =
   | {
     requestType: "agent";
     agentName: string;
-    adapterType?: AgentAdapterType;
+    adapterType?: string;
     capabilities?: string | null;
     agentDefaultsPayload?: Record<string, unknown> | null;
   };

@@ -6,13 +6,13 @@ import { authApi } from "../api/auth";
 import { healthApi } from "../api/health";
 import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
-import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
-import type { AgentAdapterType, JoinRequest } from "@paperclipai/shared";
+import { getDefaultAdapterTypesForUI } from "@paperclipai/shared";
+import type { JoinRequest } from "@paperclipai/shared";
 
 type JoinType = "human" | "agent";
-const joinAdapterOptions: AgentAdapterType[] = [
+const joinAdapterOptions: string[] = [
   "openclaw",
-  ...AGENT_ADAPTER_TYPES.filter((type): type is Exclude<AgentAdapterType, "openclaw"> => type !== "openclaw"),
+  ...getDefaultAdapterTypesForUI().filter((t) => t !== "openclaw"),
 ];
 
 const adapterLabels: Record<string, string> = {
@@ -47,7 +47,7 @@ export function InviteLandingPage() {
   const token = (params.token ?? "").trim();
   const [joinType, setJoinType] = useState<JoinType>("human");
   const [agentName, setAgentName] = useState("");
-  const [adapterType, setAdapterType] = useState<AgentAdapterType>("claude_local");
+  const [adapterType, setAdapterType] = useState<string>("claude_local");
   const [capabilities, setCapabilities] = useState("");
   const [result, setResult] = useState<{ kind: "bootstrap" | "join"; payload: unknown } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -266,7 +266,7 @@ export function InviteLandingPage() {
               <select
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 value={adapterType}
-                onChange={(event) => setAdapterType(event.target.value as AgentAdapterType)}
+                onChange={(event) => setAdapterType(event.target.value)}
               >
                 {joinAdapterOptions.map((type) => (
                   <option key={type} value={type} disabled={!ENABLED_INVITE_ADAPTERS.has(type)}>

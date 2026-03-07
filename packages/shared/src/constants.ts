@@ -21,6 +21,10 @@ export const AGENT_STATUSES = [
 ] as const;
 export type AgentStatus = (typeof AGENT_STATUSES)[number];
 
+/**
+ * Deprecated for validation: use server registry. Kept for UI fallback and typing.
+ * Allowed adapter types at runtime are defined by the server adapter registry.
+ */
 export const AGENT_ADAPTER_TYPES = [
   "process",
   "http",
@@ -33,6 +37,13 @@ export const AGENT_ADAPTER_TYPES = [
   "openclaw_gateway",
 ] as const;
 export type AgentAdapterType = (typeof AGENT_ADAPTER_TYPES)[number];
+
+/**
+ * @deprecated Use GET /api/companies/:companyId/adapters for runtime list. Fallback for UI when API is unavailable.
+ */
+export function getDefaultAdapterTypesForUI(): readonly string[] {
+  return AGENT_ADAPTER_TYPES;
+}
 
 export const AGENT_ROLES = [
   "ceo",

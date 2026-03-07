@@ -1,11 +1,13 @@
 import type { ServerAdapterModule } from "../types.js";
 import { execute } from "./execute.js";
 import { testEnvironment } from "./test.js";
+import { validateProcessConfig } from "./validate.js";
 
 export const processAdapter: ServerAdapterModule = {
   type: "process",
   execute,
   testEnvironment,
+  validateConfig: validateProcessConfig,
   models: [],
   agentConfigurationDoc: `# process agent configuration
 

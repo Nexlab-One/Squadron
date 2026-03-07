@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
+import { getDefaultAdapterTypesForUI } from "@paperclipai/shared";
 import type {
   Agent,
   AdapterEnvironmentTestResult,
@@ -279,6 +279,20 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
     adapterType === "cursor";
   const uiAdapter = useMemo(() => getUIAdapter(adapterType), [adapterType]);
 
+  const { data: adaptersData } = useQuery({
+    queryKey: selectedCompanyId ? queryKeys.agents.adapters(selectedCompanyId) : ["agents", "none", "adapters"],
+    queryFn: () => agentsApi.adapters(selectedCompanyId!),
+    enabled: Boolean(selectedCompanyId),
+  });
+  const adapterDisplayList = useMemo(() => {
+    const types = adaptersData?.adapters?.map((a) => a.type) ?? [...getDefaultAdapterTypesForUI()];
+    return types.map((t) => ({
+      value: t,
+      label: adapterLabels[t] ?? t.replace(/_/g, " "),
+      comingSoon: !ENABLED_ADAPTER_TYPES.has(t),
+    }));
+  }, [adaptersData]);
+
   // Fetch adapter models for the effective adapter type
   const {
     data: fetchedModels,
@@ -478,6 +492,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
           <Field label="Adapter type" hint={help.adapterType}>
             <AdapterTypeDropdown
               value={adapterType}
+              adapterList={adapterDisplayList}
               onChange={(t) => {
                 if (isCreate) {
                   // Reset all adapter-specific fields to defaults when switching adapter type
@@ -874,14 +889,14 @@ function AdapterEnvironmentResult({ result }: { result: AdapterEnvironmentTestRe
       </div>
       <div className="mt-2 space-y-1.5">
         {result.checks.map((check, idx) => (
-          <div key={`${check.code}-${idx}`} className="text-[11px] leading-relaxed break-words">
+          <div key={`${check.code}-${idx}`} className="text-[11px] leading-relaxed wrap-break-word">
             <span className="font-medium uppercase tracking-wide opacity-80">
               {check.level}
             </span>
             <span className="mx-1 opacity-60">·</span>
             <span>{check.message}</span>
             {check.detail && <span className="block opacity-75 break-all">({check.detail})</span>}
-            {check.hint && <span className="block opacity-90 break-words">Hint: {check.hint}</span>}
+            {check.hint && <span className="block opacity-90 wrap-break-word">Hint: {check.hint}</span>}
           </div>
         ))}
       </div>
@@ -893,21 +908,16 @@ function AdapterEnvironmentResult({ result }: { result: AdapterEnvironmentTestRe
 
 const ENABLED_ADAPTER_TYPES = new Set(["claude_local", "codex_local", "opencode_local", "cursor"]);
 
-/** Display list includes all real adapter types plus UI-only coming-soon entries. */
-const ADAPTER_DISPLAY_LIST: { value: string; label: string; comingSoon: boolean }[] = [
-  ...AGENT_ADAPTER_TYPES.map((t) => ({
-    value: t,
-    label: adapterLabels[t] ?? t,
-    comingSoon: !ENABLED_ADAPTER_TYPES.has(t),
-  })),
-];
+type AdapterDisplayItem = { value: string; label: string; comingSoon: boolean };
 
 function AdapterTypeDropdown({
   value,
   onChange,
+  adapterList,
 }: {
   value: string;
   onChange: (type: string) => void;
+  adapterList: AdapterDisplayItem[];
 }) {
   return (
     <Popover>
@@ -920,8 +930,8 @@ function AdapterTypeDropdown({
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1" align="start">
-        {ADAPTER_DISPLAY_LIST.map((item) => (
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-1" align="start">
+        {adapterList.map((item) => (
           <button
             key={item.value}
             disabled={item.comingSoon}
@@ -1116,13 +1126,13 @@ function EnvVarEditor({
         return (
           <div key={i} className="flex items-center gap-1.5">
             <input
-              className={cn(inputClass, "flex-[2]")}
+              className={cn(inputClass, "flex-2")}
               placeholder="KEY"
               value={row.key}
               onChange={(e) => updateRow(i, { key: e.target.value })}
             />
             <select
-              className={cn(inputClass, "flex-[1] bg-background")}
+              className={cn(inputClass, "flex-1 bg-background")}
               value={row.source}
               onChange={(e) =>
                 updateRow(i, {
@@ -1137,7 +1147,7 @@ function EnvVarEditor({
             {row.source === "secret" ? (
               <>
                 <select
-                  className={cn(inputClass, "flex-[3] bg-background")}
+                  className={cn(inputClass, "flex-3 bg-background")}
                   value={row.secretId}
                   onChange={(e) => updateRow(i, { secretId: e.target.value })}
                 >
@@ -1161,7 +1171,7 @@ function EnvVarEditor({
             ) : (
               <>
                 <input
-                  className={cn(inputClass, "flex-[3]")}
+                  className={cn(inputClass, "flex-3")}
                   placeholder="value"
                   value={row.plainValue}
                   onChange={(e) => updateRow(i, { plainValue: e.target.value })}
@@ -1275,7 +1285,7 @@ function ModelDropdown({
             <ChevronDown className="h-3 w-3 text-muted-foreground" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1" align="start">
+        <PopoverContent className="w-(--radix-popover-trigger-width) p-1" align="start">
           <input
             className="w-full px-2 py-1.5 text-xs bg-transparent outline-none border-b border-border mb-1 placeholder:text-muted-foreground/50"
             placeholder="Search models..."
@@ -1358,7 +1368,7 @@ function ThinkingEffortDropdown({
             <ChevronDown className="h-3 w-3 text-muted-foreground" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1" align="start">
+        <PopoverContent className="w-(--radix-popover-trigger-width) p-1" align="start">
           {options.map((option) => (
             <button
               key={option.id || "auto"}

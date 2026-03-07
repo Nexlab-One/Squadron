@@ -9,6 +9,7 @@ import {
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
 import { logger } from "../middleware/logger.js";
+import type { ApprovalServiceAdapterDeps } from "../services/approvals.js";
 import {
   approvalService,
   heartbeatService,
@@ -16,6 +17,7 @@ import {
   logActivity,
   secretService,
 } from "../services/index.js";
+import { assertAdapterTypeAllowed, validateAdapterConfig } from "../adapters/index.js";
 import { assertBoard, assertCompanyAccess, getActorInfo } from "./authz.js";
 import { redactEventPayload } from "../redaction.js";
 
@@ -28,11 +30,17 @@ function redactApprovalPayload<T extends { payload: Record<string, unknown> }>(a
 
 export function approvalRoutes(db: Db) {
   const router = Router();
-  const svc = approvalService(db);
-  const heartbeat = heartbeatService(db);
-  const issueApprovalsSvc = issueApprovalService(db);
   const secretsSvc = secretService(db);
   const strictSecretsMode = process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true";
+  const adapterDeps: ApprovalServiceAdapterDeps = {
+    secretService: secretsSvc,
+    assertAdapterTypeAllowed,
+    validateAdapterConfig,
+    getStrictSecretsMode: () => strictSecretsMode,
+  };
+  const svc = approvalService(db, adapterDeps);
+  const heartbeat = heartbeatService(db);
+  const issueApprovalsSvc = issueApprovalService(db);
 
   router.get("/companies/:companyId/approvals", async (req, res) => {
     const companyId = req.params.companyId as string;

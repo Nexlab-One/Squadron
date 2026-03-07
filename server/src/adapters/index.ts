@@ -1,4 +1,12 @@
-export { getServerAdapter, listAdapterModels, listServerAdapters, findServerAdapter } from "./registry.js";
+export {
+  getServerAdapter,
+  listAdapterModels,
+  listServerAdapters,
+  findServerAdapter,
+  getAllowedAdapterTypes,
+  assertAdapterTypeAllowed,
+  validateAdapterConfig,
+} from "./registry.js";
 export type {
   ServerAdapterModule,
   AdapterExecutionContext,

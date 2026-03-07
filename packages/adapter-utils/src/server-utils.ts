@@ -220,7 +220,13 @@ export async function runChildProcess(
 
   return new Promise<RunProcessResult>((resolve, reject) => {
     const mergedEnv = ensurePathInEnv({ ...process.env, ...opts.env });
-    const child = spawn(command, args, {
+    const isWinCmd =
+      process.platform === "win32" &&
+      (command.toLowerCase().endsWith(".cmd") || command.toLowerCase().endsWith(".bat"));
+    const spawnCommand = isWinCmd ? process.env.ComSpec ?? "cmd.exe" : command;
+    const spawnArgs = isWinCmd ? ["/c", command, ...args] : args;
+    // Security: shell is disabled; command is a single executable.
+    const child = spawn(spawnCommand, spawnArgs, {
       cwd: opts.cwd,
       env: mergedEnv,
       shell: false,

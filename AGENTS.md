@@ -119,6 +119,8 @@ If anything cannot be run, explicitly report what was not run and why.
 - Agent access uses bearer API keys (`agent_api_keys`), hashed at rest
 - Agent keys must not access other companies
 
+Adapter types are registry-driven; see `doc/SPEC-implementation.md` (Adapter types).
+
 When adding endpoints:
 
 - apply company access checks

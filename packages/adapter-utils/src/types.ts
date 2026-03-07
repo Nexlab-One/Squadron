@@ -150,6 +150,14 @@ export interface ServerAdapterModule {
   listModels?: () => Promise<AdapterModel[]>;
   agentConfigurationDoc?: string;
   /**
+   * Optional: validate adapter config after env/secret normalization. Throw with a clear message if invalid.
+   * companyId is passed for adapters that need company-scoped resources (e.g. OpenCode model check).
+   */
+  validateConfig?: (
+    config: Record<string, unknown>,
+    options?: { companyId?: string },
+  ) => void | Promise<void>;
+  /**
    * Optional lifecycle hook when an agent is approved/hired (join-request or hire_agent approval).
    * adapterConfig is the agent's adapter config so the adapter can e.g. send a callback to a configured URL.
    */

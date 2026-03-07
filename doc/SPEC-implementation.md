@@ -526,6 +526,12 @@ interface AgentAdapter {
 }
 ```
 
+## 11.1.1 Adapter types (registry-driven)
+
+Allowed adapter types are defined by the server adapter registry only. API requests may send any non-empty string for `adapterType`; the server returns 422 for unknown types. Use `GET /api/companies/:companyId/adapters` to discover allowed types at runtime. The shared constant `AGENT_ADAPTER_TYPES` is deprecated for validation and kept for UI fallback only.
+
+Join flow (agent self-join): optional env `PAPERCLIP_JOIN_ALLOWED_ADAPTER_TYPES` (comma-separated) restricts which adapter types can be used for agent join requests; omit or empty means all registry types are allowed.
+
 ## 11.2 Process Adapter
 
 Config shape:
@@ -547,6 +553,13 @@ Behavior:
 - stream stdout/stderr to run logs
 - mark run status on exit code/timeout
 - cancel sends SIGTERM then SIGKILL after grace
+
+Security:
+
+- `timeoutSec` and `graceSec` are clamped (max 7200s and 60s respectively); defaults 900s and 15s.
+- Optional: `PAPERCLIP_PROCESS_ADAPTER_ALLOWLIST` (comma-separated) restricts which command basenames are allowed; omit or empty means no restriction.
+- Optional: shell invocations are rejected unless `allowShell` in adapterConfig or `PAPERCLIP_PROCESS_ADAPTER_ALLOW_SHELL=true` is set.
+- Adapter config and secrets are redacted in activity logs and API responses.
 
 ## 11.3 HTTP Adapter
 

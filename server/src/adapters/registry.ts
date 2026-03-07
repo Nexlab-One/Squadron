@@ -1,3 +1,4 @@
+import { unprocessable } from "../errors.js";
 import type { ServerAdapterModule } from "./types.js";
 import {
   execute as claudeExecute,
@@ -56,6 +57,7 @@ import {
 } from "@paperclipai/adapter-pi-local";
 import { processAdapter } from "./process/index.js";
 import { httpAdapter } from "./http/index.js";
+import { validateOpenCodeConfig } from "./opencode-validate.js";
 
 const claudeLocalAdapter: ServerAdapterModule = {
   type: "claude_local",
@@ -113,6 +115,7 @@ const openCodeLocalAdapter: ServerAdapterModule = {
   execute: openCodeExecute,
   testEnvironment: openCodeTestEnvironment,
   sessionCodec: openCodeSessionCodec,
+  validateConfig: validateOpenCodeConfig,
   models: [],
   listModels: listOpenCodeModels,
   supportsLocalAgentJwt: true,
@@ -169,4 +172,47 @@ export function listServerAdapters(): ServerAdapterModule[] {
 
 export function findServerAdapter(type: string): ServerAdapterModule | null {
   return adaptersByType.get(type) ?? null;
+}
+
+export function getAllowedAdapterTypes(): string[] {
+  return listServerAdapters().map((a) => a.type);
+}
+
+export function assertAdapterTypeAllowed(adapterType: string | null): void {
+  if (!adapterType || typeof adapterType !== "string" || adapterType.trim() === "") {
+    throw unprocessable("adapterType is required and must be a non-empty string");
+  }
+  if (!findServerAdapter(adapterType)) {
+    throw unprocessable(
+      `Unknown adapter type: ${adapterType}. Allowed types are defined by the server registry.`,
+    );
+  }
+}
+
+export type ValidateAdapterConfigOptions = {
+  companyId?: string;
+  /** Pass when validating opencode_local so runtime config (e.g. env secrets) can be resolved. */
+  resolveAdapterConfigForRuntime?: (
+    companyId: string,
+    config: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>;
+};
+
+export async function validateAdapterConfig(
+  adapterType: string,
+  adapterConfig: Record<string, unknown>,
+  options?: ValidateAdapterConfigOptions,
+): Promise<void> {
+  const adapter = findServerAdapter(adapterType);
+  if (!adapter) {
+    throw unprocessable(`Unknown adapter type: ${adapterType}`);
+  }
+  if (adapter.validateConfig) {
+    try {
+      await Promise.resolve(adapter.validateConfig(adapterConfig, options));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw unprocessable(message);
+    }
+  }
 }

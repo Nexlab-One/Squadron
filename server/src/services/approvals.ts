@@ -4,8 +4,20 @@ import { approvalComments, approvals } from "@paperclipai/db";
 import { notFound, unprocessable } from "../errors.js";
 import { agentService } from "./agents.js";
 import { notifyHireApproved } from "./hire-hook.js";
+import type { secretService } from "./secrets.js";
 
-export function approvalService(db: Db) {
+export type ApprovalServiceAdapterDeps = {
+  secretService: ReturnType<typeof secretService>;
+  assertAdapterTypeAllowed: (type: string | null) => void;
+  validateAdapterConfig: (
+    type: string,
+    config: Record<string, unknown>,
+    opts?: { companyId?: string; resolveAdapterConfigForRuntime?: (cid: string, cfg: Record<string, unknown>) => Promise<Record<string, unknown>> },
+  ) => Promise<void>;
+  getStrictSecretsMode: () => boolean;
+};
+
+export function approvalService(db: Db, deps?: ApprovalServiceAdapterDeps) {
   const agentsSvc = agentService(db);
   const canResolveStatuses = new Set(["pending", "revision_requested"]);
 
@@ -68,17 +80,33 @@ export function approvalService(db: Db) {
           await agentsSvc.activatePendingApproval(payloadAgentId);
           hireApprovedAgentId = payloadAgentId;
         } else {
+          const adapterType = String(payload.adapterType ?? "process");
+          const rawAdapterConfig =
+            typeof payload.adapterConfig === "object" && payload.adapterConfig !== null
+              ? (payload.adapterConfig as Record<string, unknown>)
+              : {};
+          let adapterConfig = rawAdapterConfig;
+          if (deps) {
+            adapterConfig = await deps.secretService.normalizeAdapterConfigForPersistence(
+              updated.companyId,
+              rawAdapterConfig,
+              { strictMode: deps.getStrictSecretsMode() },
+            );
+            deps.assertAdapterTypeAllowed(adapterType);
+            await deps.validateAdapterConfig(adapterType, adapterConfig, {
+              companyId: updated.companyId,
+              resolveAdapterConfigForRuntime: (cid, cfg) =>
+                deps.secretService.resolveAdapterConfigForRuntime(cid, cfg),
+            });
+          }
           const created = await agentsSvc.create(updated.companyId, {
             name: String(payload.name ?? "New Agent"),
             role: String(payload.role ?? "general"),
             title: typeof payload.title === "string" ? payload.title : null,
             reportsTo: typeof payload.reportsTo === "string" ? payload.reportsTo : null,
             capabilities: typeof payload.capabilities === "string" ? payload.capabilities : null,
-            adapterType: String(payload.adapterType ?? "process"),
-            adapterConfig:
-              typeof payload.adapterConfig === "object" && payload.adapterConfig !== null
-                ? (payload.adapterConfig as Record<string, unknown>)
-                : {},
+            adapterType,
+            adapterConfig,
             budgetMonthlyCents:
               typeof payload.budgetMonthlyCents === "number" ? payload.budgetMonthlyCents : 0,
             metadata:

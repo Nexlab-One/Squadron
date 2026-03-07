@@ -1,10 +1,5 @@
 import { z } from "zod";
-import {
-  AGENT_ADAPTER_TYPES,
-  AGENT_ICON_NAMES,
-  AGENT_ROLES,
-  AGENT_STATUSES,
-} from "../constants.js";
+import { AGENT_ICON_NAMES, AGENT_ROLES, AGENT_STATUSES } from "../constants.js";
 import { envConfigSchema } from "./secret.js";
 
 export const agentPermissionsSchema = z.object({
@@ -32,7 +27,7 @@ export const createAgentSchema = z.object({
   icon: z.enum(AGENT_ICON_NAMES).optional().nullable(),
   reportsTo: z.string().uuid().optional().nullable(),
   capabilities: z.string().optional().nullable(),
-  adapterType: z.enum(AGENT_ADAPTER_TYPES).optional().default("process"),
+  adapterType: z.string().min(1).max(64).optional().default("process"),
   adapterConfig: adapterConfigSchema.optional().default({}),
   runtimeConfig: z.record(z.string(), z.unknown()).optional().default({}),
   budgetMonthlyCents: z.number().int().nonnegative().optional().default(0),

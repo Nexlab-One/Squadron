@@ -8,6 +8,12 @@ import {
   redactEnvForLogs,
   runChildProcess,
 } from "../utils.js";
+import {
+  DEFAULT_GRACE_SEC,
+  DEFAULT_TIMEOUT_SEC,
+  MAX_GRACE_SEC,
+  MAX_TIMEOUT_SEC,
+} from "./constants.js";
 
 export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
   const { runId, agent, config, onLog, onMeta } = ctx;
@@ -22,8 +28,10 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     if (typeof v === "string") env[k] = v;
   }
 
-  const timeoutSec = asNumber(config.timeoutSec, 0);
-  const graceSec = asNumber(config.graceSec, 15);
+  let timeoutSec = asNumber(config.timeoutSec, DEFAULT_TIMEOUT_SEC);
+  let graceSec = asNumber(config.graceSec, DEFAULT_GRACE_SEC);
+  timeoutSec = Math.min(MAX_TIMEOUT_SEC, Math.max(0, timeoutSec || DEFAULT_TIMEOUT_SEC));
+  graceSec = Math.min(MAX_GRACE_SEC, Math.max(0, graceSec || DEFAULT_GRACE_SEC));
 
   if (onMeta) {
     await onMeta({

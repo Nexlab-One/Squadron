@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { testEnvironment } from "@paperclipai/adapter-cursor-local/server";
 
-async function writeFakeAgentCommand(binDir: string, argsCapturePath: string): Promise<string> {
-  const commandPath = path.join(binDir, "agent");
-  const script = `#!/usr/bin/env node
+const isWindows = process.platform === "win32";
+
+const FAKE_AGENT_SCRIPT = `
 const fs = require("node:fs");
 const outPath = process.env.PAPERCLIP_TEST_ARGS_PATH;
 if (outPath) {
@@ -22,7 +22,30 @@ console.log(JSON.stringify({
   result: "hello",
 }));
 `;
-  await fs.writeFile(commandPath, script, "utf8");
+
+/**
+ * Writes a fake "agent" executable in binDir so that config.command "agent"
+ * with PATH including binDir will run it. On Windows writes agent_runner.js +
+ * agent.cmd; on Unix writes agent and chmods.
+ */
+async function writeFakeAgentCommand(binDir: string, _argsCapturePath: string): Promise<string> {
+  if (isWindows) {
+    const scriptPath = path.join(binDir, "agent_runner.js");
+    const cmdPath = path.join(binDir, "agent.cmd");
+    await fs.writeFile(scriptPath, FAKE_AGENT_SCRIPT.trim(), "utf8");
+    await fs.writeFile(
+      cmdPath,
+      '@echo off\nnode "%~dp0agent_runner.js" %*',
+      "utf8",
+    );
+    return cmdPath;
+  }
+  const commandPath = path.join(binDir, "agent");
+  await fs.writeFile(
+    commandPath,
+    "#!/usr/bin/env node" + FAKE_AGENT_SCRIPT,
+    "utf8",
+  );
   await fs.chmod(commandPath, 0o755);
   return commandPath;
 }
@@ -53,7 +76,7 @@ describe("cursor environment diagnostics", () => {
     await fs.rm(path.dirname(cwd), { recursive: true, force: true });
   });
 
-  it.skipIf(process.platform === "win32")("adds --yolo to hello probe args by default", async () => {
+  it("adds --yolo to hello probe args by default", async () => {
     const root = path.join(
       os.tmpdir(),
       `paperclip-cursor-local-probe-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -62,13 +85,13 @@ describe("cursor environment diagnostics", () => {
     const cwd = path.join(root, "workspace");
     const argsCapturePath = path.join(root, "args.json");
     await fs.mkdir(binDir, { recursive: true });
-    await writeFakeAgentCommand(binDir, argsCapturePath);
+    const agentPath = await writeFakeAgentCommand(binDir, argsCapturePath);
 
     const result = await testEnvironment({
       companyId: "company-1",
       adapterType: "cursor",
       config: {
-        command: "agent",
+        command: isWindows ? agentPath : "agent",
         cwd,
         env: {
           CURSOR_API_KEY: "test-key",
@@ -84,7 +107,7 @@ describe("cursor environment diagnostics", () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it.skipIf(process.platform === "win32")("does not auto-add --yolo when extraArgs already bypass trust", async () => {
+  it("does not auto-add --yolo when extraArgs already bypass trust", async () => {
     const root = path.join(
       os.tmpdir(),
       `paperclip-cursor-local-probe-extra-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -93,13 +116,13 @@ describe("cursor environment diagnostics", () => {
     const cwd = path.join(root, "workspace");
     const argsCapturePath = path.join(root, "args.json");
     await fs.mkdir(binDir, { recursive: true });
-    await writeFakeAgentCommand(binDir, argsCapturePath);
+    const agentPath = await writeFakeAgentCommand(binDir, argsCapturePath);
 
     const result = await testEnvironment({
       companyId: "company-1",
       adapterType: "cursor",
       config: {
-        command: "agent",
+        command: isWindows ? agentPath : "agent",
         cwd,
         extraArgs: ["--yolo"],
         env: {

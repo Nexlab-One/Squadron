@@ -117,6 +117,11 @@ export const agentsApi = {
     api.get<AgentTaskSession[]>(agentPath(id, companyId, "/task-sessions")),
   resetSession: (id: string, taskKey?: string | null, companyId?: string) =>
     api.post<void>(agentPath(id, companyId, "/runtime-state/reset-session"), { taskKey: taskKey ?? null }),
+  /** Preferred source for allowed adapter types (registry-driven). */
+  adapters: (companyId: string) =>
+    api.get<{ adapters: { type: string; label: string; agentConfigurationDoc: string | null }[] }>(
+      `/companies/${encodeURIComponent(companyId)}/adapters`,
+    ),
   adapterModels: (companyId: string, type: string) =>
     api.get<AdapterModel[]>(
       `/companies/${encodeURIComponent(companyId)}/adapters/${encodeURIComponent(type)}/models`,
