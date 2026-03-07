@@ -256,9 +256,8 @@ We welcome contributions. See the [contributing guide](CONTRIBUTING.md) for deta
 
 ## Community
 
-- [Discord](https://discord.gg/m4HZY7xNG3) — Join the community
-- [GitHub Issues](https://github.com/paperclipai/paperclip/issues) — bugs and feature requests
-- [GitHub Discussions](https://github.com/paperclipai/paperclip/discussions) — ideas and RFC
+- [GitHub Issues](https://github.com/Nexlab-One/Squadron/issues) — bugs and feature requests
+- [GitHub Discussions](https://github.com/Nexlab-One/Squadron/discussions) — ideas and RFC
 
 <br/>
 
@@ -268,7 +267,7 @@ MIT &copy; 2026 Squadron (fork of Paperclip)
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/image?repos=paperclipai/paperclip&type=date&legend=top-left)](https://www.star-history.com/?repos=paperclipai%2Fpaperclip&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/image?repos=Nexlab-One/Squadron&type=date&legend=top-left)](https://www.star-history.com/?repos=Nexlab-One%2FSquadron&type=date&legend=top-left)
 
 <br/>
 
@@ -279,5 +278,9 @@ MIT &copy; 2026 Squadron (fork of Paperclip)
 </p>
 
 <p align="center">
-  <sub>Open source under MIT. Built for people who want to run companies, not babysit agents.</sub>
+  <sub>Open source under MIT. Built for people who want to lead companies, not babysit agents.</sub>
+</p>
+
+<p align="center">
+  <sub>Favicon: <a href="https://www.flaticon.com/free-icons/crash" title="crash icons">Crash icons created by Parzival' 1997 - Flaticon</a></sub>
 </p>

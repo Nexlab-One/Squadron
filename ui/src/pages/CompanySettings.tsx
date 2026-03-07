@@ -484,7 +484,7 @@ In order for Squadron to work smoothly, you need to enable \`gateway.http.endpoi
 
 Please enable that setting and notify your user that we did so.
 
-Before you do anything, please respond to your user that you understand the instructions and you're going to work on them. Then do the step above in another session called "paperclip-onboarding" and then tell your user when you're done. Update your user in intermediate steps along the way so they know what's going on.
+Before you do anything, please respond to your user that you understand the instructions and you're going to work on them. Then do the step above in another session called "squadron-onboarding" and then tell your user when you're done. Update your user in intermediate steps along the way so they know what's going on.
 
 Then after you've connected to Squadron (exchanged keys etc.) you MUST review and follow the onboarding instructions in onboarding.txt they give you.
 
