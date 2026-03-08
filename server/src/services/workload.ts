@@ -16,7 +16,7 @@ import type {
 } from "@paperclipai/shared";
 import { notFound } from "../errors.js";
 
-const PENDING_STATUSES = ["backlog", "todo", "in_progress", "in_review", "blocked"] as const;
+const PENDING_STATUSES = ["backlog", "todo", "in_progress", "in_review", "quality_review", "blocked"] as const;
 const PRIORITIES = ["critical", "high", "medium", "low"] as const;
 const FINISHED_RUN_STATUSES = ["succeeded", "failed", "timed_out", "cancelled"] as const;
 const ACTIVE_RUN_STATUSES = ["queued", "running"] as const;

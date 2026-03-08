@@ -7,6 +7,7 @@ import type {
   HeartbeatRun,
   Approval,
   AgentConfigRevision,
+  AgentAttribution,
 } from "@paperclipai/shared";
 import { isUuidLike, normalizeAgentUrlKey } from "@paperclipai/shared";
 import { ApiError, api } from "./client";
@@ -135,6 +136,22 @@ export const agentsApi = {
       `/companies/${companyId}/adapters/${type}/test-environment`,
       data,
     ),
+  getAttribution: (
+    id: string,
+    companyId?: string,
+    params?: { from?: string; to?: string; activityLimit?: number; runsLimit?: number; privileged?: boolean },
+  ) => {
+    let path = agentPath(id, companyId, "/attribution");
+    const extra = new URLSearchParams();
+    if (params?.from) extra.set("from", params.from);
+    if (params?.to) extra.set("to", params.to);
+    if (params?.activityLimit != null) extra.set("activityLimit", String(params.activityLimit));
+    if (params?.runsLimit != null) extra.set("runsLimit", String(params.runsLimit));
+    if (params?.privileged) extra.set("privileged", "1");
+    const extraStr = extra.toString();
+    if (extraStr) path += (path.includes("?") ? "&" : "?") + extraStr;
+    return api.get<AgentAttribution>(path);
+  },
   invoke: (id: string, companyId?: string) => api.post<HeartbeatRun>(agentPath(id, companyId, "/heartbeat/invoke"), {}),
   wakeup: (
     id: string,

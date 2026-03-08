@@ -103,6 +103,7 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
   const companyId = issue.companyId ?? selectedCompanyId;
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState("");
+  const [requiresQROpen, setRequiresQROpen] = useState(false);
   const [projectOpen, setProjectOpen] = useState(false);
   const [projectSearch, setProjectSearch] = useState("");
   const [labelsOpen, setLabelsOpen] = useState(false);
@@ -450,6 +451,44 @@ export function IssueProperties({ issue, onUpdate, inline }: IssuePropertiesProp
             showLabel
           />
         </PropertyRow>
+
+        <PropertyPicker
+          inline={inline}
+          label="Quality review"
+          open={requiresQROpen}
+          onOpenChange={setRequiresQROpen}
+          triggerContent={
+            <span className="text-sm">
+              {issue.requiresQualityReview === true
+                ? "Yes"
+                : issue.requiresQualityReview === false
+                  ? "No"
+                  : "Company default"}
+            </span>
+          }
+          popoverClassName="w-40"
+        >
+          {[
+            { value: null, label: "Company default" },
+            { value: true, label: "Yes" },
+            { value: false, label: "No" },
+          ].map((opt) => (
+            <button
+              key={String(opt.value)}
+              type="button"
+              className={cn(
+                "flex w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-left",
+                (issue.requiresQualityReview ?? null) === opt.value && "bg-accent/50",
+              )}
+              onClick={() => {
+                onUpdate({ requiresQualityReview: opt.value });
+                setRequiresQROpen(false);
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </PropertyPicker>
 
         <PropertyPicker
           inline={inline}

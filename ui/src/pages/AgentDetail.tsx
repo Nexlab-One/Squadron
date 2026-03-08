@@ -56,7 +56,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AgentIcon, AgentIconPicker } from "../components/AgentIconPicker";
-import { isUuidLike, type Agent, type HeartbeatRun, type HeartbeatRunEvent, type AgentRuntimeState, type LiveEvent } from "@paperclipai/shared";
+import { isUuidLike, type Agent, type HeartbeatRun, type HeartbeatRunEvent, type AgentRuntimeState, type LiveEvent, type AgentAttribution } from "@paperclipai/shared";
 import { agentRouteRef } from "../lib/utils";
 
 const runStatusIcons: Record<string, { icon: typeof CheckCircle2; color: string }> = {
@@ -172,11 +172,12 @@ function scrollToContainerBottom(container: ScrollContainer, behavior: ScrollBeh
   container.scrollTo({ top: container.scrollHeight, behavior });
 }
 
-type AgentDetailView = "overview" | "configure" | "runs";
+type AgentDetailView = "overview" | "configure" | "runs" | "attribution";
 
 function parseAgentDetailView(value: string | null): AgentDetailView {
   if (value === "configure" || value === "configuration") return "configure";
-  if (value === "runs") return value;
+  if (value === "runs") return "runs";
+  if (value === "attribution") return "attribution";
   return "overview";
 }
 
@@ -407,6 +408,8 @@ export function AgentDetail() {
         crumbs.push({ label: "Configure" });
       } else if (activeView === "runs") {
         crumbs.push({ label: "Runs" });
+      } else if (activeView === "attribution") {
+        crumbs.push({ label: "Attribution" });
       }
     }
     setBreadcrumbs(crumbs);
@@ -522,6 +525,16 @@ export function AgentDetail() {
               >
                 <Settings className="h-3 w-3" />
                 Configure Agent
+              </button>
+              <button
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50"
+                onClick={() => {
+                  navigate(`/agents/${canonicalAgentRef}/attribution`);
+                  setMoreOpen(false);
+                }}
+              >
+                <Timer className="h-3 w-3" />
+                Attribution report
               </button>
               <button
                 className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50"
@@ -656,6 +669,14 @@ export function AgentDetail() {
           agentRouteId={canonicalAgentRef}
           selectedRunId={urlRunId ?? null}
           adapterType={agent.adapterType}
+        />
+      )}
+
+      {activeView === "attribution" && (
+        <AttributionTab
+          agentId={agent.id}
+          agentRouteId={canonicalAgentRef}
+          companyId={resolvedCompanyId ?? undefined}
         />
       )}
     </div>
@@ -816,7 +837,15 @@ function AgentOverview({
 
       {/* Costs */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium">Costs</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Costs</h3>
+          <Link
+            to={`/agents/${agentRouteId}/attribution`}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Attribution report &rarr;
+          </Link>
+        </div>
         <CostsSection runtimeState={runtimeState} runs={runs} />
       </div>
 
@@ -1342,6 +1371,112 @@ function RunsTab({
           <RunDetail key={selectedRun.id} run={selectedRun} agentRouteId={agentRouteId} adapterType={adapterType} />
         </div>
       )}
+    </div>
+  );
+}
+
+/* ---- Attribution Tab ---- */
+
+function AttributionTab({
+  agentId,
+  agentRouteId,
+  companyId,
+}: {
+  agentId: string;
+  agentRouteId: string;
+  companyId?: string;
+}) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.agents.attribution(agentId, companyId),
+    queryFn: () => agentsApi.getAttribution(agentRouteId, companyId, { privileged: true }),
+    enabled: Boolean(agentId),
+  });
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading attribution…</p>;
+  if (error) return <p className="text-sm text-destructive">{error instanceof Error ? error.message : "Failed to load attribution"}</p>;
+  if (!data) return null;
+
+  const { cost, activity, runs, companySpendCents, companyBudgetCents } = data;
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <h3 className="text-sm font-medium">Attribution report</h3>
+      <p className="text-xs text-muted-foreground">
+        Cost, activity, and recent runs for this agent. Agents can request their own report via <code className="rounded bg-muted px-1">GET /api/agents/me/attribution</code>.
+      </p>
+
+      <div className="border border-border rounded-lg p-4 space-y-2">
+        <h4 className="text-xs font-medium text-muted-foreground">Cost</h4>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <span>{formatCents(cost.spendCents)} spent</span>
+          <span>{formatCents(cost.budgetCents)} budget</span>
+          <span>{cost.utilizationPercent}% utilization</span>
+          {cost.period && (
+            <span className="text-muted-foreground">
+              {new Date(cost.period.from).toLocaleDateString()} – {new Date(cost.period.to).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+        {companySpendCents != null && companyBudgetCents != null && (
+          <p className="text-xs text-muted-foreground pt-1">
+            Company total: {formatCents(companySpendCents)} / {formatCents(companyBudgetCents)}
+          </p>
+        )}
+      </div>
+
+      <div className="border border-border rounded-lg overflow-hidden">
+        <h4 className="text-xs font-medium text-muted-foreground px-4 py-2 border-b border-border bg-muted/30">
+          Recent activity ({activity.length})
+        </h4>
+        {activity.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">No activity in this window.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {activity.slice(0, 30).map((ev) => (
+              <li key={ev.id} className="px-4 py-2 text-xs flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground">{relativeTime(ev.createdAt)}</span>
+                <span className="font-medium">{ev.action}</span>
+                <span className="text-muted-foreground">{ev.entityType} {ev.entityId.slice(0, 8)}</span>
+              </li>
+            ))}
+            {activity.length > 30 && (
+              <li className="px-4 py-2 text-xs text-muted-foreground">+{activity.length - 30} more</li>
+            )}
+          </ul>
+        )}
+      </div>
+
+      <div className="border border-border rounded-lg overflow-hidden">
+        <h4 className="text-xs font-medium text-muted-foreground px-4 py-2 border-b border-border bg-muted/30">
+          Recent runs ({runs.length})
+        </h4>
+        {runs.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">No runs in this window.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {runs.slice(0, 20).map((run) => {
+              const statusInfo = runStatusIcons[run.status] ?? { icon: Clock, color: "text-neutral-400" };
+              const StatusIcon = statusInfo.icon;
+              return (
+                <li key={run.id}>
+                  <Link
+                    to={`/agents/${agentRouteId}/runs/${run.id}`}
+                    className="flex items-center gap-2 px-4 py-2 text-xs hover:bg-muted/30 transition-colors no-underline text-inherit"
+                  >
+                    <StatusIcon className={cn("h-3 w-3 shrink-0", statusInfo.color)} />
+                    <span className="font-mono">{run.id.slice(0, 8)}</span>
+                    <StatusBadge status={run.status} />
+                    <span className="text-muted-foreground ml-auto">{relativeTime(run.createdAt)}</span>
+                  </Link>
+                </li>
+              );
+            })}
+            {runs.length > 20 && (
+              <li className="px-4 py-2 text-xs text-muted-foreground">+{runs.length - 20} more</li>
+            )}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

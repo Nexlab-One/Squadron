@@ -116,7 +116,7 @@ export function standupService(db: Db) {
           continue;
         }
 
-        if (row.status === "in_review") {
+        if (row.status === "in_review" || row.status === "quality_review") {
           if (row.assigneeAgentId) {
             const section = agentSectionByAgentId.get(row.assigneeAgentId);
             if (section) section.review.push(summary);

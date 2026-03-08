@@ -33,7 +33,13 @@ export type {
   CompanySecret,
   SecretProviderDescriptor,
 } from "./secrets.js";
-export type { CostEvent, CostSummary, CostByAgent } from "./cost.js";
+export type {
+  CostEvent,
+  CostSummary,
+  CostByAgent,
+  CostSeriesPoint,
+  CostByModel,
+} from "./cost.js";
 export type {
   HeartbeatRun,
   HeartbeatRunEvent,
@@ -42,6 +48,12 @@ export type {
   AgentWakeupRequest,
 } from "./heartbeat.js";
 export type { LiveEvent } from "./live.js";
+export type {
+  LiveFeedItem,
+  LiveFeedItemKind,
+  LiveFeedFilter,
+  LIVE_FEED_FILTERS,
+} from "./live-feed.js";
 export type { DashboardSummary } from "./dashboard.js";
 export type {
   WorkloadRecommendationAction,
@@ -53,6 +65,7 @@ export type {
   WorkloadResponse,
 } from "./workload.js";
 export type { ActivityEvent } from "./activity.js";
+export type { AgentAttribution, AgentAttributionCost } from "./attribution.js";
 export type {
   StandupIssueSummary,
   StandupAgentSection,

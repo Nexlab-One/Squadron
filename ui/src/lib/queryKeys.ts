@@ -14,6 +14,8 @@ export const queryKeys = {
     adapters: (companyId: string) => ["agents", companyId, "adapters"] as const,
     adapterModels: (companyId: string, adapterType: string) =>
       ["agents", companyId, "adapter-models", adapterType] as const,
+    attribution: (agentId: string, companyId?: string) =>
+      ["agents", "attribution", agentId, companyId ?? ""] as const,
   },
   issues: {
     list: (companyId: string) => ["issues", companyId] as const,
@@ -31,6 +33,7 @@ export const queryKeys = {
     activity: (issueId: string) => ["issues", "activity", issueId] as const,
     runs: (issueId: string) => ["issues", "runs", issueId] as const,
     approvals: (issueId: string) => ["issues", "approvals", issueId] as const,
+    qualityReview: (issueId: string) => ["issues", "quality-review", issueId] as const,
     liveRuns: (issueId: string) => ["issues", "live-runs", issueId] as const,
     activeRun: (issueId: string) => ["issues", "active-run", issueId] as const,
   },
@@ -58,6 +61,9 @@ export const queryKeys = {
     session: ["auth", "session"] as const,
   },
   health: ["health"] as const,
+  releases: {
+    check: ["releases", "check"] as const,
+  },
   secrets: {
     list: (companyId: string) => ["secrets", companyId] as const,
     providers: (companyId: string) => ["secret-providers", companyId] as const,
@@ -66,8 +72,12 @@ export const queryKeys = {
   standup: (companyId: string) => ["standup", companyId] as const,
   sidebarBadges: (companyId: string) => ["sidebar-badges", companyId] as const,
   activity: (companyId: string) => ["activity", companyId] as const,
-  costs: (companyId: string, from?: string, to?: string) =>
-    ["costs", companyId, from, to] as const,
+  costs: (
+    companyId: string,
+    from?: string,
+    to?: string,
+    bucket?: "day" | "week",
+  ) => ["costs", companyId, from, to, bucket] as const,
   heartbeats: (companyId: string, agentId?: string) =>
     ["heartbeats", companyId, agentId] as const,
   liveRuns: (companyId: string) => ["live-runs", companyId] as const,

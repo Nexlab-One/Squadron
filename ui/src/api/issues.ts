@@ -69,6 +69,7 @@ export const issuesApi = {
   },
   deleteAttachment: (id: string) => api.delete<{ ok: true }>(`/attachments/${id}`),
   listApprovals: (id: string) => api.get<Approval[]>(`/issues/${id}/approvals`),
+  getQualityReview: (id: string) => api.get<Approval | null>(`/issues/${id}/quality-review`),
   linkApproval: (id: string, approvalId: string) =>
     api.post<Approval[]>(`/issues/${id}/approvals`, { approvalId }),
   unlinkApproval: (id: string, approvalId: string) =>

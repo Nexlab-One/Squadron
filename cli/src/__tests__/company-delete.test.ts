@@ -13,6 +13,7 @@ function makeCompany(overrides: Partial<Company>): Company {
     budgetMonthlyCents: 0,
     spentMonthlyCents: 0,
     requireBoardApprovalForNewAgents: false,
+    requireQualityReviewForDone: false,
     brandColor: null,
     createdAt: new Date(),
     updatedAt: new Date(),

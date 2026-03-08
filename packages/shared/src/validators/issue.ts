@@ -20,6 +20,7 @@ export const createIssueSchema = z.object({
   assigneeUserId: z.string().optional().nullable(),
   requestDepth: z.number().int().nonnegative().optional().default(0),
   billingCode: z.string().optional().nullable(),
+  requiresQualityReview: z.boolean().optional().nullable(),
   assigneeAdapterOverrides: issueAssigneeAdapterOverridesSchema.optional().nullable(),
   labelIds: z.array(z.string().uuid()).optional(),
 });
@@ -36,6 +37,7 @@ export type CreateIssueLabel = z.infer<typeof createIssueLabelSchema>;
 export const updateIssueSchema = createIssueSchema.partial().extend({
   comment: z.string().min(1).optional(),
   hiddenAt: z.string().datetime().nullable().optional(),
+  requiresQualityReview: z.boolean().optional().nullable(),
 });
 
 export type UpdateIssue = z.infer<typeof updateIssueSchema>;

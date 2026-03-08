@@ -19,9 +19,11 @@ import {
 import { validate } from "../middleware/validate.js";
 import type { ApprovalServiceAdapterDeps } from "../services/approvals.js";
 import {
+  activityService,
   agentService,
   accessService,
   approvalService,
+  costService,
   heartbeatService,
   issueApprovalService,
   issueService,
@@ -443,6 +445,92 @@ export function agentRoutes(db: Db) {
     }
     const chainOfCommand = await svc.getChainOfCommand(agent.id);
     res.json({ ...agent, chainOfCommand });
+  });
+
+  router.get("/agents/:id/attribution", async (req, res) => {
+    const id = req.params.id as string;
+    const activityLimit = Math.min(
+      Math.max(1, parseInt(String(req.query.activityLimit), 10) || 50),
+      500,
+    );
+    const runsLimit = Math.min(
+      Math.max(1, parseInt(String(req.query.runsLimit), 10) || 20),
+      100,
+    );
+    const from = req.query.from ? new Date(String(req.query.from)) : undefined;
+    const to = req.query.to ? new Date(String(req.query.to)) : undefined;
+    const range = from || to ? { from, to } : undefined;
+    const privileged = req.query.privileged === "1" || req.query.privileged === "true";
+
+    let agentId = id;
+    if (id === "me") {
+      if (req.actor.type !== "agent" || !req.actor.agentId) {
+        res.status(400).json({ error: "Use /agents/me/attribution with agent authentication" });
+        return;
+      }
+      agentId = req.actor.agentId;
+    }
+
+    const agent = await svc.getById(agentId);
+    if (!agent) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    assertCompanyAccess(req, agent.companyId);
+
+    if (req.actor.type === "agent" && req.actor.agentId !== agentId) {
+      res.status(403).json({ error: "Agent can only view own attribution" });
+      return;
+    }
+
+    const activitySvc = activityService(db);
+    const costs = costService(db);
+    const [activity, byAgentRows, runs] = await Promise.all([
+      activitySvc.list({
+        companyId: agent.companyId,
+        agentId,
+        limit: activityLimit,
+      }),
+      costs.byAgent(agent.companyId, range),
+      heartbeat.list(agent.companyId, agentId, runsLimit),
+    ]);
+
+    const agentRow = byAgentRows.find((r) => r.agentId === agentId);
+    const spendCents = agentRow?.costCents ?? 0;
+    const budgetCents = agent.budgetMonthlyCents ?? 0;
+    const utilizationPercent =
+      budgetCents > 0 ? Number(((spendCents / budgetCents) * 100).toFixed(2)) : 0;
+
+    const cost = {
+      spendCents,
+      budgetCents,
+      utilizationPercent,
+      ...(range?.from && range?.to && { period: { from: range.from.toISOString(), to: range.to.toISOString() } }),
+    };
+
+    const payload: {
+      agentId: string;
+      companyId: string;
+      cost: typeof cost;
+      activity: typeof activity;
+      runs: typeof runs;
+      companySpendCents?: number;
+      companyBudgetCents?: number;
+    } = {
+      agentId,
+      companyId: agent.companyId,
+      cost,
+      activity,
+      runs,
+    };
+
+    if (req.actor.type === "board" && privileged) {
+      const summary = await costs.summary(agent.companyId, range);
+      payload.companySpendCents = summary.spendCents;
+      payload.companyBudgetCents = summary.budgetCents;
+    }
+
+    res.json(payload);
   });
 
   router.get("/agents/:id", async (req, res) => {

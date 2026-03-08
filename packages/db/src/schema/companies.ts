@@ -14,6 +14,7 @@ export const companies = pgTable(
     requireBoardApprovalForNewAgents: boolean("require_board_approval_for_new_agents")
       .notNull()
       .default(true),
+    requireQualityReviewForDone: boolean("require_quality_review_for_done").notNull().default(false),
     brandColor: text("brand_color"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

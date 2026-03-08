@@ -40,10 +40,18 @@ export function costRoutes(db: Db) {
     res.status(201).json(event);
   });
 
+  const MAX_SERIES_RANGE_DAYS = 366;
+
   function parseDateRange(query: Record<string, unknown>) {
     const from = query.from ? new Date(query.from as string) : undefined;
     const to = query.to ? new Date(query.to as string) : undefined;
     return (from || to) ? { from, to } : undefined;
+  }
+
+  function rangeDays(range: { from?: Date; to?: Date } | undefined): number | null {
+    if (!range?.from || !range?.to) return null;
+    const ms = range.to.getTime() - range.from.getTime();
+    return Math.ceil(ms / (24 * 60 * 60 * 1000));
   }
 
   router.get("/companies/:companyId/costs/summary", async (req, res) => {
@@ -59,6 +67,11 @@ export function costRoutes(db: Db) {
     assertCompanyAccess(req, companyId);
     const range = parseDateRange(req.query);
     const rows = await costs.byAgent(companyId, range);
+    if (req.actor.type === "agent" && req.actor.agentId) {
+      const selfRow = rows.filter((r) => r.agentId === req.actor.agentId);
+      res.json(selfRow);
+      return;
+    }
     res.json(rows);
   });
 
@@ -67,6 +80,30 @@ export function costRoutes(db: Db) {
     assertCompanyAccess(req, companyId);
     const range = parseDateRange(req.query);
     const rows = await costs.byProject(companyId, range);
+    res.json(rows);
+  });
+
+  router.get("/companies/:companyId/costs/series", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    const range = parseDateRange(req.query);
+    const days = rangeDays(range);
+    if (days !== null && days > MAX_SERIES_RANGE_DAYS) {
+      res.status(400).json({
+        error: `Date range exceeds maximum of ${MAX_SERIES_RANGE_DAYS} days`,
+      });
+      return;
+    }
+    const bucket = req.query.bucket === "week" ? "week" : "day";
+    const rows = await costs.series(companyId, range, bucket);
+    res.json(rows);
+  });
+
+  router.get("/companies/:companyId/costs/by-model", async (req, res) => {
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    const range = parseDateRange(req.query);
+    const rows = await costs.byModel(companyId, range);
     res.json(rows);
   });
 

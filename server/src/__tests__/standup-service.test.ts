@@ -93,6 +93,15 @@ describe("standupService.getReport", () => {
           completedAt: null,
           assigneeAgentId: agent2Id,
         },
+        {
+          id: "issue-quality-review",
+          identifier: "P-4",
+          title: "In quality review",
+          status: "quality_review",
+          startedAt: null,
+          completedAt: null,
+          assigneeAgentId: agent1Id,
+        },
       ],
     });
     const svc = standupService(db);
@@ -121,5 +130,9 @@ describe("standupService.getReport", () => {
 
     expect(report.overdue).toHaveLength(1);
     expect(report.overdue[0].title).toBe("Stale in progress");
+
+    expect(agent1?.review).toHaveLength(1);
+    expect(agent1?.review[0].title).toBe("In quality review");
+    expect(agent1?.review[0].status).toBe("quality_review");
   });
 });

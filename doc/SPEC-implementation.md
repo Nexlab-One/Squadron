@@ -128,6 +128,7 @@ Human auth tables (`users`, `sessions`, and provider-specific auth artifacts) ar
 - `name` text not null
 - `description` text null
 - `status` enum: `active | paused | archived`
+- `require_quality_review_for_done` boolean not null default false (default for task-level quality gate when issue.requires_quality_review is null)
 
 Invariant: every business record belongs to exactly one company.
 
@@ -199,8 +200,9 @@ Invariant: at least one root `company` level goal per company.
 - `parent_id` uuid fk `issues.id` null
 - `title` text not null
 - `description` text null
-- `status` enum: `backlog | todo | in_progress | in_review | done | blocked | cancelled`
+- `status` enum: `backlog | todo | in_progress | in_review | quality_review | done | blocked | cancelled`
 - `priority` enum: `critical | high | medium | low`
+- `requires_quality_review` boolean null (per-task override; null = use company default)
 - `assignee_agent_id` uuid fk `agents.id` null
 - `created_by_agent_id` uuid fk `agents.id` null
 - `created_by_user_id` uuid fk `users.id` null
@@ -261,7 +263,7 @@ Invariant: each event must attach to agent and company; rollups are aggregation,
 
 - `id` uuid pk
 - `company_id` uuid fk not null
-- `type` enum: `hire_agent | approve_ceo_strategy`
+- `type` enum: `hire_agent | approve_ceo_strategy | quality_review`
 - `requested_by_agent_id` uuid fk `agents.id` null
 - `requested_by_user_id` uuid fk `users.id` null
 - `status` enum: `pending | approved | rejected | cancelled`
@@ -404,6 +406,7 @@ Side effects:
 | Create/update task | yes | yes |
 | Force reassign task | yes | limited |
 | Approve strategy/hire requests | yes | no |
+| Approve quality review (task sign-off) | yes | no |
 | Report cost | yes | yes |
 | Set company budget | yes | no |
 | Set subordinate budget | yes | yes (manager subtree only) |
@@ -439,12 +442,19 @@ All endpoints are under `/api` and return JSON.
 - `POST /agents/:agentId/terminate`
 - `POST /agents/:agentId/keys` (create API key)
 - `POST /agents/:agentId/heartbeat/invoke`
+- `GET /agents/me/attribution` — Agent self-service: when authenticated as agent, returns only that agent’s attribution (cost, activity, runs). Same response shape as `GET /agents/:id/attribution` with `id` = authenticated agent.
+- `GET /agents/:agentId/attribution` — Attribution report for one agent. Query: `from`, `to` (ISO date range), `activityLimit` (default 50, max 500), `runsLimit` (default 20, max 100), `privileged=1` (board only, adds company cost comparison). Auth: agent may only request self (`id` = `me` or own agent id); board may request any agent in an accessible company. Response: `agentId`, `companyId`, `cost` (spendCents, budgetCents, utilizationPercent, optional period), `activity` (array), `runs` (array); with `privileged=1`, `companySpendCents` and `companyBudgetCents`.
+
+### 10.3.1 Agent self-service (attribution)
+
+Agents can call `GET /agents/me/attribution` or `GET /agents/:id/attribution` with `id` = own id to view their own cost, recent activity, and heartbeat runs without seeing other agents’ data. Board can request any agent’s attribution and use `?privileged=1` for company-level comparison.
 
 ## 10.4 Tasks (Issues)
 
 - `GET /companies/:companyId/issues`
 - `POST /companies/:companyId/issues`
 - `GET /issues/:issueId`
+- `GET /issues/:issueId/quality-review` — Returns the current quality_review approval for the issue (pending or approved), or null if none.
 - `PATCH /issues/:issueId`
 - `POST /issues/:issueId/checkout`
 - `POST /issues/:issueId/release`
@@ -490,8 +500,10 @@ Server behavior:
 
 - `POST /companies/:companyId/cost-events`
 - `GET /companies/:companyId/costs/summary`
-- `GET /companies/:companyId/costs/by-agent`
+- `GET /companies/:companyId/costs/by-agent` — When caller is agent, response contains only that agent’s row.
 - `GET /companies/:companyId/costs/by-project`
+- `GET /companies/:companyId/costs/series?from=&to=&bucket=day|week` — Time-series rollups for charts (date, costCents, inputTokens, outputTokens per bucket). Max range 366 days.
+- `GET /companies/:companyId/costs/by-model?from=&to=` — Cost and token breakdown by model (and provider).
 - `PATCH /companies/:companyId/budgets`
 - `PATCH /agents/:agentId/budgets`
 
@@ -499,7 +511,7 @@ Server behavior:
 
 This section covers activity log access, dashboard summary, the company-scoped real-time event stream (SSE), and the workload/capacity API for throttle signals.
 
-- `GET /companies/:companyId/activity`
+- `GET /companies/:companyId/activity` — When caller is agent, response is restricted to that agent’s activity only (query `agentId` is ignored).
 - `GET /companies/:companyId/dashboard`
 - `GET /companies/:companyId/standup` — Standup report: per-agent buckets (completed, in progress, assigned, review, blocked), team accomplishments (done in last 24h), blockers, and overdue (stale in-progress tasks, i.e. `started_at` older than 1h; issues have no due date in V1). Auth: same as dashboard (`assertCompanyAccess`).
 
@@ -507,7 +519,7 @@ This section covers activity log access, dashboard summary, the company-scoped r
 
 Squadron provides **broad real-time updates** for a company via a Server-Sent Events (SSE) stream. Clients subscribe once and receive live activity, heartbeat run state changes, and agent lifecycle events for that company without polling.
 
-- `GET /companies/:companyId/events` — Server-Sent Events stream for live activity, heartbeat, and agent events for the given company. Auth at connection start only: board (session or local_trusted) or agent (Bearer token or query `?token=` for EventSource). Optional query `token` allows browser `EventSource(url)` to authenticate without custom headers; prefer HTTPS and short-lived tokens when using query auth. Response: `Content-Type: text/event-stream`; each event is `data: <JSON>\n\n` (initial connected payload, then `LiveEvent` objects); comment heartbeats every 30s to keep the connection alive. Use this endpoint for dashboards and UIs that need to stay in sync with activity, run status, and agent changes. WebSocket remains at `GET /api/companies/:companyId/events/ws` for existing clients.
+- `GET /companies/:companyId/events` — Server-Sent Events stream for live activity, heartbeat, and agent events for the given company. Auth at connection start only: board (session or local_trusted) or agent (Bearer token or query `?token=` for EventSource). Optional query `token` allows browser `EventSource(url)` to authenticate without custom headers; prefer HTTPS and short-lived tokens when using query auth. Response: `Content-Type: text/event-stream`; each event is `data: <JSON>\n\n` (initial connected payload, then `LiveEvent` objects); comment heartbeats every 30s to keep the connection alive. Use this endpoint for dashboards and UIs that need to stay in sync with activity, run status, and agent changes. WebSocket remains at `GET /api/companies/:companyId/events/ws` for existing clients. The board UI uses WebSocket by default and may fall back to SSE when WebSocket is unavailable (e.g. after repeated connection failures). An optional **Live Feed** strip in the board UI merges recent activity, run status, and agent events from this stream (and optionally hydrates from `GET /companies/:companyId/activity` on first open).
 
 Dashboard payload must include:
 
@@ -604,7 +616,11 @@ Behavior:
 - `thin`: send IDs and pointers only; agent fetches context via API
 - `fat`: include current assignments, goal summary, budget snapshot, and recent comments
 
-## 11.5 Scheduler Rules
+## 11.5 Outbound work_available webhooks
+
+When an issue has an agent assignee in a workable status, the server may POST a `work_available` event to the agent’s configured webhook URL. Delivery uses HMAC-SHA256 signing, status-aware retry (5xx, 408, 429, timeouts only) with configurable backoff and jitter, and an in-memory circuit breaker per agent. Delivery remains best-effort and fire-and-forget; no delivery queue or at-least-once guarantee in V1.
+
+## 11.6 Scheduler Rules
 
 Per-agent schedule fields in `adapter_config`:
 

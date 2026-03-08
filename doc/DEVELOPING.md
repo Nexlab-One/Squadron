@@ -137,6 +137,7 @@ Expected:
 
 - `/api/health` returns `{"status":"ok"}`
 - `/api/companies` returns a JSON array
+- `GET /api/releases/check` returns `{ currentVersion, latestVersion?, releasesUrl? }` for the update-available banner. Optional: set `SQUADRON_RELEASES_REPO=owner/repo` (default `paperclipai/paperclip`) or `SQUADRON_UPDATE_CHECK_DISABLED=1` to disable the check.
 
 Notable company-scoped endpoints (require auth and a valid `companyId`):
 

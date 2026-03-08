@@ -11,7 +11,8 @@ import { Identity } from "../components/Identity";
 import { StatusBadge } from "../components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Download } from "lucide-react";
+import { CostOverTimeChart, CostByModelChart, TokensByModelBarChart } from "../components/CostCharts";
 
 type DatePreset = "mtd" | "7d" | "30d" | "ytd" | "all" | "custom";
 
@@ -23,6 +24,21 @@ const PRESET_LABELS: Record<DatePreset, string> = {
   all: "All Time",
   custom: "Custom",
 };
+
+function escapeCsvCell(v: string | number): string {
+  const s = String(v);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function computeRange(preset: DatePreset): { from: string; to: string } {
   const now = new Date();
@@ -73,15 +89,35 @@ export function Costs() {
     return computeRange(preset);
   }, [preset, customFrom, customTo]);
 
+  const seriesBucket = useMemo((): "day" | "week" => {
+    if (!from || !to) return "day";
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const days = Math.ceil((toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000));
+    return days > 31 ? "week" : "day";
+  }, [from, to]);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.costs(selectedCompanyId!, from || undefined, to || undefined),
+    queryKey: queryKeys.costs(
+      selectedCompanyId!,
+      from || undefined,
+      to || undefined,
+      seriesBucket,
+    ),
     queryFn: async () => {
-      const [summary, byAgent, byProject] = await Promise.all([
+      const [summary, byAgent, byProject, series, byModel] = await Promise.all([
         costsApi.summary(selectedCompanyId!, from || undefined, to || undefined),
         costsApi.byAgent(selectedCompanyId!, from || undefined, to || undefined),
         costsApi.byProject(selectedCompanyId!, from || undefined, to || undefined),
+        costsApi.series(
+          selectedCompanyId!,
+          from || undefined,
+          to || undefined,
+          seriesBucket,
+        ),
+        costsApi.byModel(selectedCompanyId!, from || undefined, to || undefined),
       ]);
-      return { summary, byAgent, byProject };
+      return { summary, byAgent, byProject, series, byModel };
     },
     enabled: !!selectedCompanyId,
   });
@@ -95,10 +131,129 @@ export function Costs() {
   }
 
   const presetKeys: DatePreset[] = ["mtd", "7d", "30d", "ytd", "all", "custom"];
+  const exportDate = new Date().toISOString().slice(0, 10);
+
+  function handleExportJSON() {
+    if (!data || !selectedCompanyId) return;
+    const payload = {
+      summary: data.summary,
+      byAgent: data.byAgent,
+      byProject: data.byProject,
+      series: data.series,
+      byModel: data.byModel,
+      meta: {
+        companyId: selectedCompanyId,
+        from: from || null,
+        to: to || null,
+        exportedAt: new Date().toISOString(),
+      },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    downloadBlob(blob, `costs-${selectedCompanyId}-${exportDate}.json`);
+  }
+
+  function handleExportCSV() {
+    if (!data || !selectedCompanyId) return;
+    const prefix = `costs-${selectedCompanyId}-${exportDate}`;
+
+    const summaryHeaders = ["companyId", "spendCents", "budgetCents", "utilizationPercent"];
+    const summaryRow = summaryHeaders
+      .map((k) =>
+        escapeCsvCell(
+          String((data.summary as unknown as Record<string, unknown>)[k] ?? ""),
+        ),
+      )
+      .join(",");
+    downloadBlob(
+      new Blob([summaryHeaders.join(",") + "\n" + summaryRow + "\n"], {
+        type: "text/csv;charset=utf-8",
+      }),
+      `${prefix}-summary.csv`,
+    );
+
+    const byAgentHeaders = [
+      "agentId",
+      "agentName",
+      "agentStatus",
+      "costCents",
+      "inputTokens",
+      "outputTokens",
+      "apiRunCount",
+      "subscriptionRunCount",
+    ];
+    const byAgentRows = data.byAgent.map((row) =>
+      byAgentHeaders
+        .map((k) =>
+          escapeCsvCell(
+            String((row as unknown as Record<string, unknown>)[k] ?? ""),
+          ),
+        )
+        .join(","),
+    );
+    downloadBlob(
+      new Blob([byAgentHeaders.join(",") + "\n" + byAgentRows.join("\n") + "\n"], {
+        type: "text/csv;charset=utf-8",
+      }),
+      `${prefix}-by-agent.csv`,
+    );
+
+    const byProjectHeaders = ["projectId", "projectName", "costCents", "inputTokens", "outputTokens"];
+    const byProjectRows = data.byProject.map((row) =>
+      byProjectHeaders
+        .map((k) =>
+          escapeCsvCell(
+            String((row as unknown as Record<string, unknown>)[k] ?? ""),
+          ),
+        )
+        .join(","),
+    );
+    downloadBlob(
+      new Blob([byProjectHeaders.join(",") + "\n" + byProjectRows.join("\n") + "\n"], {
+        type: "text/csv;charset=utf-8",
+      }),
+      `${prefix}-by-project.csv`,
+    );
+
+    const seriesHeaders = ["date", "costCents", "inputTokens", "outputTokens"];
+    const seriesRows = data.series.map((row) =>
+      seriesHeaders
+        .map((k) =>
+          escapeCsvCell(
+            String((row as unknown as Record<string, unknown>)[k] ?? ""),
+          ),
+        )
+        .join(","),
+    );
+    downloadBlob(
+      new Blob([seriesHeaders.join(",") + "\n" + seriesRows.join("\n") + "\n"], {
+        type: "text/csv;charset=utf-8",
+      }),
+      `${prefix}-series.csv`,
+    );
+
+    const byModelHeaders = ["model", "provider", "costCents", "inputTokens", "outputTokens"];
+    const byModelRows = data.byModel.map((row) =>
+      byModelHeaders
+        .map((k) =>
+          escapeCsvCell(
+            String((row as unknown as Record<string, unknown>)[k] ?? ""),
+          ),
+        )
+        .join(","),
+    );
+    downloadBlob(
+      new Blob([byModelHeaders.join(",") + "\n" + byModelRows.join("\n") + "\n"], {
+        type: "text/csv;charset=utf-8",
+      }),
+      `${prefix}-by-model.csv`,
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Date range selector */}
+      {/* Date range selector + Export */}
       <div className="flex flex-wrap items-center gap-2">
         {presetKeys.map((p) => (
           <Button
@@ -125,6 +280,18 @@ export function Costs() {
               onChange={(e) => setCustomTo(e.target.value)}
               className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
             />
+          </div>
+        )}
+        {data && (
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant="outline" size="sm" onClick={handleExportJSON}>
+              <Download className="h-4 w-4 mr-1" />
+              Export JSON
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportCSV}>
+              <Download className="h-4 w-4 mr-1" />
+              Export CSV
+            </Button>
           </div>
         )}
       </div>
@@ -168,6 +335,15 @@ export function Costs() {
               )}
             </CardContent>
           </Card>
+
+          {/* Charts */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <CostOverTimeChart series={data.series} />
+            <CostByModelChart byModel={data.byModel} />
+          </div>
+          <div className="grid md:grid-cols-1 gap-4">
+            <TokensByModelBarChart byModel={data.byModel} />
+          </div>
 
           {/* By Agent / By Project */}
           <div className="grid md:grid-cols-2 gap-4">

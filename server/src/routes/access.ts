@@ -1608,6 +1608,7 @@ export function buildInviteOnboardingTextDocument(
 
       Test each candidate with:
       - GET <candidate>/api/health
+      - GET <candidate>/api/releases/check
       - set the first reachable candidate as agentDefaultsPayload.paperclipApiUrl when submitting your join request
 
       If none are reachable: ask your human operator for a reachable hostname/address and help them update network configuration.

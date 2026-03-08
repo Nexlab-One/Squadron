@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-quer
 import type { Agent, Issue, LiveEvent } from "@paperclipai/shared";
 import { authApi } from "../api/auth";
 import { useCompany } from "./CompanyContext";
+import { useLiveFeed } from "./LiveFeedContext";
 import type { ToastInput } from "./ToastContext";
 import { useToast } from "./ToastContext";
 import { queryKeys } from "../lib/queryKeys";
@@ -10,6 +11,8 @@ import { queryKeys } from "../lib/queryKeys";
 const TOAST_COOLDOWN_WINDOW_MS = 10_000;
 const TOAST_COOLDOWN_MAX = 3;
 const RECONNECT_SUPPRESS_MS = 2000;
+/** After this many WebSocket reconnect attempts, fall back to SSE. */
+const WS_FALLBACK_AFTER_ATTEMPTS = 3;
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -507,7 +510,9 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
   const { selectedCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
+  const { append: appendToFeed, clear: clearFeed } = useLiveFeed();
   const gateRef = useRef<ToastGate>({ cooldownHits: new Map(), suppressUntil: 0 });
+  const prevCompanyIdRef = useRef<string | null>(null);
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
@@ -515,13 +520,22 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
   });
   const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
 
+  const useSSERef = useRef(false);
+
   useEffect(() => {
     if (!selectedCompanyId) return;
+
+    if (prevCompanyIdRef.current !== null && prevCompanyIdRef.current !== selectedCompanyId) {
+      clearFeed();
+    }
+    prevCompanyIdRef.current = selectedCompanyId;
+    useSSERef.current = false;
 
     let closed = false;
     let reconnectAttempt = 0;
     let reconnectTimer: number | null = null;
     let socket: WebSocket | null = null;
+    let eventSource: EventSource | null = null;
 
     const clearReconnect = () => {
       if (reconnectTimer !== null) {
@@ -530,9 +544,22 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const processEvent = (parsed: LiveEvent) => {
+      handleLiveEvent(queryClient, selectedCompanyId, parsed, pushToast, gateRef.current, {
+        userId: currentUserId,
+        agentId: null,
+      });
+      if (parsed.companyId === selectedCompanyId) {
+        appendToFeed(parsed, "live");
+      }
+    };
+
     const scheduleReconnect = () => {
       if (closed) return;
       reconnectAttempt += 1;
+      if (reconnectAttempt >= WS_FALLBACK_AFTER_ATTEMPTS) {
+        useSSERef.current = true;
+      }
       const delayMs = Math.min(15000, 1000 * 2 ** Math.min(reconnectAttempt - 1, 4));
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
@@ -542,6 +569,28 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
 
     const connect = () => {
       if (closed) return;
+
+      if (useSSERef.current) {
+        const url = `${window.location.origin}/api/companies/${encodeURIComponent(selectedCompanyId)}/events`;
+        eventSource = new EventSource(url);
+        eventSource.onmessage = (ev: MessageEvent) => {
+          const raw = typeof ev.data === "string" ? ev.data : "";
+          if (!raw || raw.startsWith(":")) return;
+          try {
+            const parsed = JSON.parse(raw) as LiveEvent;
+            processEvent(parsed);
+          } catch {
+            // Ignore non-JSON payloads.
+          }
+        };
+        eventSource.onerror = () => {
+          eventSource?.close();
+          eventSource = null;
+          if (!closed) scheduleReconnect();
+        };
+        return;
+      }
+
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
       const url = `${protocol}://${window.location.host}/api/companies/${encodeURIComponent(selectedCompanyId)}/events/ws`;
       socket = new WebSocket(url);
@@ -556,13 +605,9 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
       socket.onmessage = (message) => {
         const raw = typeof message.data === "string" ? message.data : "";
         if (!raw) return;
-
         try {
           const parsed = JSON.parse(raw) as LiveEvent;
-          handleLiveEvent(queryClient, selectedCompanyId, parsed, pushToast, gateRef.current, {
-            userId: currentUserId,
-            agentId: null,
-          });
+          processEvent(parsed);
         } catch {
           // Ignore non-JSON payloads.
         }
@@ -590,8 +635,13 @@ export function LiveUpdatesProvider({ children }: { children: ReactNode }) {
         socket.onclose = null;
         socket.close(1000, "provider_unmount");
       }
+      if (eventSource) {
+        eventSource.onmessage = null;
+        eventSource.onerror = null;
+        eventSource.close();
+      }
     };
-  }, [queryClient, selectedCompanyId, pushToast, currentUserId]);
+  }, [queryClient, selectedCompanyId, pushToast, currentUserId, appendToFeed, clearFeed]);
 
   return <>{children}</>;
 }

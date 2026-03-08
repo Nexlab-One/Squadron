@@ -3,6 +3,7 @@ import type { Db } from "@paperclipai/db";
 import {
   deliverWorkAvailable,
   isAllowedWebhookUrl,
+  resetWebhookCircuitForTests,
   signWebhookPayload,
   WORKABLE_STATUSES_FOR_WEBHOOK,
   WEBHOOK_VERSION,
@@ -53,8 +54,28 @@ describe("agent-webhook", () => {
     const companyId = "company-1";
     const issueId = "issue-1";
 
+    function mockDb(runtimeConfig: Record<string, unknown>): Db {
+      return {
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () =>
+                Promise.resolve([
+                  {
+                    id: agentId,
+                    companyId,
+                    runtimeConfig,
+                  },
+                ]),
+            }),
+          }),
+        }),
+      } as unknown as Db;
+    }
+
     beforeEach(() => {
       vi.stubGlobal("fetch", vi.fn());
+      resetWebhookCircuitForTests();
     });
 
     afterEach(() => {
@@ -62,46 +83,12 @@ describe("agent-webhook", () => {
     });
 
     it("returns without sending when agent has no webhookUrl", async () => {
-      const db = {
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              limit: () =>
-                Promise.resolve([
-                  {
-                    id: agentId,
-                    companyId,
-                    runtimeConfig: {},
-                  },
-                ]),
-            }),
-          }),
-        }),
-      } as unknown as Db;
-
-      await deliverWorkAvailable(agentId, companyId, issueId, db);
+      await deliverWorkAvailable(agentId, companyId, issueId, mockDb({}));
       expect(fetch).not.toHaveBeenCalled();
     });
 
     it("returns without sending when agent has webhookUrl but no webhookSecret", async () => {
-      const db = {
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              limit: () =>
-                Promise.resolve([
-                  {
-                    id: agentId,
-                    companyId,
-                    runtimeConfig: { webhookUrl: "https://example.com/hook" },
-                  },
-                ]),
-            }),
-          }),
-        }),
-      } as unknown as Db;
-
-      await deliverWorkAvailable(agentId, companyId, issueId, db);
+      await deliverWorkAvailable(agentId, companyId, issueId, mockDb({ webhookUrl: "https://example.com/hook" }));
       expect(fetch).not.toHaveBeenCalled();
     });
 
@@ -110,24 +97,7 @@ describe("agent-webhook", () => {
       const secret = "my-secret";
       (vi.mocked(fetch) as any).mockResolvedValue({ ok: true });
 
-      const db = {
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              limit: () =>
-                Promise.resolve([
-                  {
-                    id: agentId,
-                    companyId,
-                    runtimeConfig: { webhookUrl, webhookSecret: secret },
-                  },
-                ]),
-            }),
-          }),
-        }),
-      } as unknown as Db;
-
-      await deliverWorkAvailable(agentId, companyId, issueId, db);
+      await deliverWorkAvailable(agentId, companyId, issueId, mockDb({ webhookUrl, webhookSecret: secret }));
 
       expect(fetch).toHaveBeenCalledTimes(1);
       const [url, opts] = (fetch as any).mock.calls[0];
@@ -147,6 +117,171 @@ describe("agent-webhook", () => {
       expect(typeof payload.timestamp).toBe("string");
       const expectedSig = signWebhookPayload(body, secret);
       expect(opts.headers["X-Paperclip-Signature"]).toBe(expectedSig);
+    });
+
+    describe("retry policy", () => {
+      it("retries on 5xx up to max attempts", async () => {
+        vi.useFakeTimers();
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: false, status: 500 });
+        const db = mockDb({ webhookUrl: "https://example.com/hook", webhookSecret: "secret" });
+
+        let err: unknown;
+        const p = deliverWorkAvailable(agentId, companyId, issueId, db).catch((e) => {
+          err = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p;
+        vi.useRealTimers();
+
+        expect(err).toBeDefined();
+        expect((err as Error).message).toBe("HTTP 500");
+        expect(fetch).toHaveBeenCalledTimes(4);
+      });
+
+      it("does not retry on 4xx (e.g. 400)", async () => {
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: false, status: 400 });
+        const db = mockDb({ webhookUrl: "https://example.com/hook", webhookSecret: "secret" });
+
+        await expect(deliverWorkAvailable(agentId, companyId, issueId, db)).rejects.toThrow("HTTP 400");
+        expect(fetch).toHaveBeenCalledTimes(1);
+      });
+
+      it("succeeds on second attempt and stops retrying", async () => {
+        vi.useFakeTimers();
+        (vi.mocked(fetch) as any)
+          .mockResolvedValueOnce({ ok: false, status: 503 })
+          .mockResolvedValueOnce({ ok: true });
+        const db = mockDb({ webhookUrl: "https://example.com/hook", webhookSecret: "secret" });
+
+        const p = deliverWorkAvailable(agentId, companyId, issueId, db);
+        await vi.advanceTimersByTimeAsync(2000);
+        await p;
+        vi.useRealTimers();
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe("circuit breaker", () => {
+      const circuitAgentId = "circuit-agent-1";
+
+      function mockDbCircuit(config: Record<string, unknown>): Db {
+        return {
+          select: () => ({
+            from: () => ({
+              where: () => ({
+                limit: () =>
+                  Promise.resolve([
+                    {
+                      id: circuitAgentId,
+                      companyId: "company-1",
+                      runtimeConfig: config,
+                    },
+                  ]),
+              }),
+            }),
+          }),
+        } as unknown as Db;
+      }
+
+      it("skips delivery when circuit is open", async () => {
+        resetWebhookCircuitForTests();
+        vi.useFakeTimers();
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: false, status: 500 });
+        const db = mockDbCircuit({
+          webhookUrl: "https://example.com/hook",
+          webhookSecret: "secret",
+        });
+
+        let err1: unknown;
+        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db).catch((e) => {
+          err1 = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p1;
+        expect(err1).toBeDefined();
+        expect((err1 as Error).message).toBe("HTTP 500");
+        expect(fetch).toHaveBeenCalledTimes(4);
+
+        let err2: unknown;
+        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db).catch((e) => {
+          err2 = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p2;
+        expect(err2).toBeDefined();
+        expect(fetch).toHaveBeenCalledTimes(8);
+
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db);
+        expect(fetch).toHaveBeenCalledTimes(8);
+        vi.useRealTimers();
+      });
+
+      it("attempts delivery again after reset", async () => {
+        resetWebhookCircuitForTests();
+        vi.useFakeTimers();
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: false, status: 500 });
+        const db = mockDbCircuit({
+          webhookUrl: "https://example.com/hook",
+          webhookSecret: "secret",
+        });
+
+        let err1: unknown;
+        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db).catch((e) => {
+          err1 = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p1;
+        let err2: unknown;
+        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db).catch((e) => {
+          err2 = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p2;
+        expect(err1).toBeDefined();
+        expect(err2).toBeDefined();
+        expect(fetch).toHaveBeenCalledTimes(8);
+        resetWebhookCircuitForTests();
+        vi.useRealTimers();
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: true });
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db);
+        expect(fetch).toHaveBeenCalledTimes(9);
+      });
+
+      it("allows one probe after cooldown then closes on success", async () => {
+        resetWebhookCircuitForTests();
+        vi.useFakeTimers();
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: false, status: 500 });
+        const db = mockDbCircuit({
+          webhookUrl: "https://example.com/hook",
+          webhookSecret: "secret",
+        });
+
+        let err1: unknown;
+        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db).catch((e) => {
+          err1 = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p1;
+        let err2: unknown;
+        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db).catch((e) => {
+          err2 = e;
+        });
+        await vi.advanceTimersByTimeAsync(10000);
+        await p2;
+        expect(err1).toBeDefined();
+        expect(err2).toBeDefined();
+        expect(fetch).toHaveBeenCalledTimes(8);
+
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db);
+        expect(fetch).toHaveBeenCalledTimes(8);
+
+        vi.advanceTimersByTime(61000);
+        (vi.mocked(fetch) as any).mockResolvedValue({ ok: true });
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-4", db);
+        expect(fetch).toHaveBeenCalledTimes(9);
+        vi.useRealTimers();
+      });
     });
   });
 

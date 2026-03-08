@@ -110,6 +110,7 @@ export const ISSUE_STATUSES = [
   "todo",
   "in_progress",
   "in_review",
+  "quality_review",
   "done",
   "blocked",
   "cancelled",
@@ -147,7 +148,7 @@ export const PROJECT_COLORS = [
   "#3b82f6", // blue
 ] as const;
 
-export const APPROVAL_TYPES = ["hire_agent", "approve_ceo_strategy"] as const;
+export const APPROVAL_TYPES = ["hire_agent", "approve_ceo_strategy", "quality_review"] as const;
 export type ApprovalType = (typeof APPROVAL_TYPES)[number];
 
 export const APPROVAL_STATUSES = [
@@ -212,6 +213,21 @@ export const LIVE_EVENT_TYPES = [
   "activity.logged",
 ] as const;
 export type LiveEventType = (typeof LIVE_EVENT_TYPES)[number];
+
+/** Max number of items kept in the in-memory live feed (oldest dropped when over). */
+export const LIVE_FEED_MAX_ITEMS = 100;
+
+/** Number of activity log entries to fetch when hydrating the feed on first open. */
+export const LIVE_FEED_HYDRATE_LIMIT = 50;
+
+/** Terminal run statuses shown in the feed (queued/running are optional). */
+export const LIVE_FEED_TERMINAL_RUN_STATUSES = [
+  "succeeded",
+  "failed",
+  "cancelled",
+  "timed_out",
+] as const;
+export type LiveFeedTerminalRunStatus = (typeof LIVE_FEED_TERMINAL_RUN_STATUSES)[number];
 
 export const PRINCIPAL_TYPES = ["user", "agent"] as const;
 export type PrincipalType = (typeof PRINCIPAL_TYPES)[number];

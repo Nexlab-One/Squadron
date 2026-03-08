@@ -2,11 +2,13 @@ import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import {
   agents,
+  approvals,
   assets,
   companies,
   companyMemberships,
   goals,
   heartbeatRuns,
+  issueApprovals,
   issueAttachments,
   issueLabels,
   issueComments,
@@ -19,13 +21,44 @@ import {
 import { extractProjectMentionIds } from "@paperclipai/shared";
 import { conflict, notFound, unprocessable } from "../errors.js";
 
-const ALL_ISSUE_STATUSES = ["backlog", "todo", "in_progress", "in_review", "blocked", "done", "cancelled"];
+const ALL_ISSUE_STATUSES = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "in_review",
+  "quality_review",
+  "blocked",
+  "done",
+  "cancelled",
+];
+
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  backlog: ["todo", "cancelled"],
+  todo: ["in_progress", "blocked", "cancelled"],
+  in_progress: ["in_review", "quality_review", "blocked", "done", "cancelled"],
+  in_review: ["in_progress", "quality_review", "done", "cancelled"],
+  quality_review: ["in_progress", "done", "cancelled"],
+  blocked: ["todo", "in_progress", "cancelled"],
+  done: [],
+  cancelled: [],
+};
 
 function assertTransition(from: string, to: string) {
   if (from === to) return;
   if (!ALL_ISSUE_STATUSES.includes(to)) {
     throw conflict(`Unknown issue status: ${to}`);
   }
+  const allowed = ALLOWED_TRANSITIONS[from];
+  if (!allowed?.includes(to)) {
+    throw conflict(`Invalid status transition: ${from} -> ${to}`);
+  }
+}
+
+function effectiveQualityReviewRequired(
+  issue: { requiresQualityReview: boolean | null },
+  company: { requireQualityReviewForDone: boolean },
+): boolean {
+  return issue.requiresQualityReview ?? company.requireQualityReviewForDone;
 }
 
 function applyStatusSideEffects(
@@ -678,6 +711,46 @@ export function issueService(db: Db) {
         assertTransition(existing.status, issueData.status);
       }
 
+      let company: { requireQualityReviewForDone: boolean } | null = null;
+      if (
+        issueData.status === "done" ||
+        issueData.status === "quality_review"
+      ) {
+        const [row] = await db
+          .select({ requireQualityReviewForDone: companies.requireQualityReviewForDone })
+          .from(companies)
+          .where(eq(companies.id, existing.companyId));
+        company = row ?? null;
+      }
+
+      if (issueData.status === "done" && company) {
+        const effective = effectiveQualityReviewRequired(existing, company);
+        if (existing.status === "in_review" && effective) {
+          throw unprocessable(
+            "Quality review required. Move to Quality review first, then get board sign-off before marking done.",
+          );
+        }
+        if (existing.status === "quality_review" && effective) {
+          const [approved] = await db
+            .select({ id: approvals.id })
+            .from(issueApprovals)
+            .innerJoin(approvals, eq(issueApprovals.approvalId, approvals.id))
+            .where(
+              and(
+                eq(issueApprovals.issueId, id),
+                eq(approvals.type, "quality_review"),
+                eq(approvals.status, "approved"),
+              ),
+            )
+            .limit(1);
+          if (!approved) {
+            throw unprocessable(
+              "Quality review approval required before marking done.",
+            );
+          }
+        }
+      }
+
       const patch: Partial<typeof issues.$inferInsert> = {
         ...issueData,
         updatedAt: new Date(),
@@ -733,6 +806,42 @@ export function issueService(db: Db) {
         if (!updated) return null;
         if (nextLabelIds !== undefined) {
           await syncIssueLabels(updated.id, existing.companyId, nextLabelIds, tx);
+        }
+        if (
+          issueData.status === "quality_review" &&
+          company &&
+          effectiveQualityReviewRequired(
+            { requiresQualityReview: updated.requiresQualityReview },
+            company,
+          )
+        ) {
+          const existingQr = await tx
+            .select({ approvalId: issueApprovals.approvalId })
+            .from(issueApprovals)
+            .innerJoin(approvals, eq(issueApprovals.approvalId, approvals.id))
+            .where(
+              and(
+                eq(issueApprovals.issueId, id),
+                eq(approvals.type, "quality_review"),
+              ),
+            )
+            .limit(1);
+          if (existingQr.length === 0) {
+            const [approval] = await tx
+              .insert(approvals)
+              .values({
+                companyId: existing.companyId,
+                type: "quality_review",
+                status: "pending",
+                payload: { issueId: id },
+              })
+              .returning();
+            await tx.insert(issueApprovals).values({
+              companyId: existing.companyId,
+              issueId: id,
+              approvalId: approval.id,
+            });
+          }
         }
         const [enriched] = await withIssueLabels(tx, [updated]);
         return enriched;

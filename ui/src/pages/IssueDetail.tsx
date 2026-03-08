@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { issuesApi } from "../api/issues";
+import { approvalsApi } from "../api/approvals";
 import { activityApi } from "../api/activity";
 import { heartbeatsApi } from "../api/heartbeats";
 import { agentsApi } from "../api/agents";
@@ -191,6 +192,12 @@ export function IssueDetail() {
     enabled: !!issueId,
   });
 
+  const { data: qualityReviewApproval } = useQuery({
+    queryKey: queryKeys.issues.qualityReview(issueId!),
+    queryFn: () => issuesApi.getQualityReview(issueId!),
+    enabled: !!issueId && issue?.status === "quality_review",
+  });
+
   const { data: attachments } = useQuery({
     queryKey: queryKeys.issues.attachments(issueId!),
     queryFn: () => issuesApi.listAttachments(issueId!),
@@ -377,6 +384,7 @@ export function IssueDetail() {
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.activity(issueId!) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.runs(issueId!) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.approvals(issueId!) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.issues.qualityReview(issueId!) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.attachments(issueId!) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.liveRuns(issueId!) });
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.activeRun(issueId!) });
@@ -401,6 +409,20 @@ export function IssueDetail() {
 
   const updateIssue = useMutation({
     mutationFn: (data: Record<string, unknown>) => issuesApi.update(issueId!, data),
+    onSuccess: () => {
+      invalidateIssue();
+    },
+  });
+
+  const approveQualityReview = useMutation({
+    mutationFn: (approvalId: string) => approvalsApi.approve(approvalId),
+    onSuccess: () => {
+      invalidateIssue();
+    },
+  });
+
+  const rejectQualityReview = useMutation({
+    mutationFn: (approvalId: string) => approvalsApi.reject(approvalId),
     onSuccess: () => {
       invalidateIssue();
     },
@@ -539,6 +561,50 @@ export function IssueDetail() {
         <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           <EyeOff className="h-4 w-4 shrink-0" />
           This issue is hidden
+        </div>
+      )}
+
+      {issue.status === "quality_review" && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-3 space-y-2">
+          <div className="text-sm font-medium text-amber-700 dark:text-amber-400">Quality review</div>
+          {qualityReviewApproval == null ? (
+            <p className="text-xs text-muted-foreground">No quality review approval linked.</p>
+          ) : qualityReviewApproval.status === "approved" ? (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">
+                Approved
+                {qualityReviewApproval.decidedByUserId && ` by ${qualityReviewApproval.decidedByUserId}`}
+                {qualityReviewApproval.decidedAt && ` ${relativeTime(qualityReviewApproval.decidedAt)}`}.
+              </span>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => updateIssue.mutate({ status: "done" })}
+                disabled={updateIssue.isPending}
+              >
+                Mark done
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusBadge status={qualityReviewApproval.status} />
+              <Button
+                size="sm"
+                onClick={() => approveQualityReview.mutate(qualityReviewApproval.id)}
+                disabled={approveQualityReview.isPending}
+              >
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => rejectQualityReview.mutate(qualityReviewApproval.id)}
+                disabled={rejectQualityReview.isPending}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

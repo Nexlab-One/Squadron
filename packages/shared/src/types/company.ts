@@ -10,6 +10,7 @@ export interface Company {
   budgetMonthlyCents: number;
   spentMonthlyCents: number;
   requireBoardApprovalForNewAgents: boolean;
+  requireQualityReviewForDone: boolean;
   brandColor: string | null;
   createdAt: Date;
   updatedAt: Date;

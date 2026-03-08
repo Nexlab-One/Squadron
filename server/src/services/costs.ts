@@ -153,6 +153,68 @@ export function costService(db: Db) {
       });
     },
 
+    series: async (
+      companyId: string,
+      range?: CostDateRange,
+      bucket: "day" | "week" = "day",
+    ) => {
+      const conditions: ReturnType<typeof eq>[] = [eq(costEvents.companyId, companyId)];
+      if (range?.from) conditions.push(gte(costEvents.occurredAt, range.from));
+      if (range?.to) conditions.push(lte(costEvents.occurredAt, range.to));
+
+      const trunc =
+        bucket === "week"
+          ? sql`date_trunc('week', ${costEvents.occurredAt})::date`
+          : sql`date_trunc('day', ${costEvents.occurredAt})::date`;
+      const dateStr = sql<string>`to_char(${trunc}, 'YYYY-MM-DD')`;
+
+      const rows = await db
+        .select({
+          date: dateStr,
+          costCents: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+          inputTokens: sql<number>`coalesce(sum(${costEvents.inputTokens}), 0)::int`,
+          outputTokens: sql<number>`coalesce(sum(${costEvents.outputTokens}), 0)::int`,
+        })
+        .from(costEvents)
+        .where(and(...conditions))
+        .groupBy(trunc)
+        .orderBy(trunc);
+
+      return rows.map((r) => ({
+        date: r.date,
+        costCents: Number(r.costCents),
+        inputTokens: Number(r.inputTokens),
+        outputTokens: Number(r.outputTokens),
+      }));
+    },
+
+    byModel: async (companyId: string, range?: CostDateRange) => {
+      const conditions: ReturnType<typeof eq>[] = [eq(costEvents.companyId, companyId)];
+      if (range?.from) conditions.push(gte(costEvents.occurredAt, range.from));
+      if (range?.to) conditions.push(lte(costEvents.occurredAt, range.to));
+
+      const rows = await db
+        .select({
+          model: costEvents.model,
+          provider: costEvents.provider,
+          costCents: sql<number>`coalesce(sum(${costEvents.costCents}), 0)::int`,
+          inputTokens: sql<number>`coalesce(sum(${costEvents.inputTokens}), 0)::int`,
+          outputTokens: sql<number>`coalesce(sum(${costEvents.outputTokens}), 0)::int`,
+        })
+        .from(costEvents)
+        .where(and(...conditions))
+        .groupBy(costEvents.model, costEvents.provider)
+        .orderBy(desc(sql`coalesce(sum(${costEvents.costCents}), 0)::int`));
+
+      return rows.map((r) => ({
+        model: r.model,
+        provider: r.provider,
+        costCents: Number(r.costCents),
+        inputTokens: Number(r.inputTokens),
+        outputTokens: Number(r.outputTokens),
+      }));
+    },
+
     byProject: async (companyId: string, range?: CostDateRange) => {
       const issueIdAsText = sql<string>`${issues.id}::text`;
       const runProjectLinks = db

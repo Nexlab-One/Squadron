@@ -75,6 +75,16 @@ export function CompanySettings() {
     }
   });
 
+  const qualityReviewMutation = useMutation({
+    mutationFn: (requireQualityReview: boolean) =>
+      companiesApi.update(selectedCompanyId!, {
+        requireQualityReviewForDone: requireQualityReview,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
+    },
+  });
+
   const inviteMutation = useMutation({
     mutationFn: () =>
       accessApi.createCompanyInvite(selectedCompanyId!, {
@@ -305,6 +315,20 @@ export function CompanySettings() {
             hint="New agent hires stay pending until approved by board."
             checked={!!selectedCompany.requireBoardApprovalForNewAgents}
             onChange={(v) => settingsMutation.mutate(v)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Tasks
+        </div>
+        <div className="rounded-md border border-border px-4 py-3">
+          <ToggleField
+            label="Require quality review before done"
+            hint="Tasks must be moved to Quality review and approved by board before marking done (unless overridden per task)."
+            checked={!!selectedCompany.requireQualityReviewForDone}
+            onChange={(v) => qualityReviewMutation.mutate(v)}
           />
         </div>
       </div>

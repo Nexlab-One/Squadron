@@ -156,7 +156,14 @@ const statuses = [
   { value: "todo", label: "Todo", color: issueStatusText.todo ?? issueStatusTextDefault },
   { value: "in_progress", label: "In Progress", color: issueStatusText.in_progress ?? issueStatusTextDefault },
   { value: "in_review", label: "In Review", color: issueStatusText.in_review ?? issueStatusTextDefault },
+  { value: "quality_review", label: "Quality Review", color: issueStatusText.quality_review ?? issueStatusTextDefault },
   { value: "done", label: "Done", color: issueStatusText.done ?? issueStatusTextDefault },
+];
+
+const requiresQualityReviewOptions = [
+  { value: "default", label: "Company default", payload: null as boolean | null },
+  { value: "yes", label: "Yes", payload: true },
+  { value: "no", label: "No", payload: false },
 ];
 
 const priorities = [
@@ -182,6 +189,7 @@ export function NewIssueDialog() {
   const [assigneeChrome, setAssigneeChrome] = useState(false);
   const [assigneeUseProjectWorkspace, setAssigneeUseProjectWorkspace] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const [requiresQualityReviewOption, setRequiresQualityReviewOption] = useState<"default" | "yes" | "no">("default");
   const [dialogCompanyId, setDialogCompanyId] = useState<string | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -428,6 +436,8 @@ export function NewIssueDialog() {
       chrome: assigneeChrome,
       useProjectWorkspace: assigneeUseProjectWorkspace,
     });
+    const requiresQualityReview =
+      requiresQualityReviewOptions.find((o) => o.value === requiresQualityReviewOption)?.payload ?? null;
     createIssue.mutate({
       companyId: effectiveCompanyId,
       title: title.trim(),
@@ -437,6 +447,7 @@ export function NewIssueDialog() {
       ...(assigneeId ? { assigneeAgentId: assigneeId } : {}),
       ...(projectId ? { projectId } : {}),
       ...(assigneeAdapterOverrides ? { assigneeAdapterOverrides } : {}),
+      requiresQualityReview,
     });
   }
 
@@ -930,8 +941,27 @@ export function NewIssueDialog() {
                 <MoreHorizontal className="h-3 w-3" />
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-44 p-1" align="start">
-              <button className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-muted-foreground">
+            <PopoverContent className="w-52 p-1" align="start">
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b border-border mb-1">
+                Require quality review
+              </div>
+              {requiresQualityReviewOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-left",
+                    requiresQualityReviewOption === opt.value ? "bg-accent/50 text-foreground" : "text-muted-foreground",
+                  )}
+                  onClick={() => {
+                    setRequiresQualityReviewOption(opt.value as "default" | "yes" | "no");
+                    setMoreOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-muted-foreground mt-1">
                 <Calendar className="h-3 w-3" />
                 Start date
               </button>

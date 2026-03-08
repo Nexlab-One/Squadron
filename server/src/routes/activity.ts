@@ -26,9 +26,13 @@ export function activityRoutes(db: Db) {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
 
+    let agentId = req.query.agentId as string | undefined;
+    if (req.actor.type === "agent") {
+      agentId = req.actor.agentId ?? undefined;
+    }
     const filters = {
       companyId,
-      agentId: req.query.agentId as string | undefined,
+      agentId,
       entityType: req.query.entityType as string | undefined,
       entityId: req.query.entityId as string | undefined,
     };

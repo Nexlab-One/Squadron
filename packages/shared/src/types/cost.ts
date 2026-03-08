@@ -34,3 +34,18 @@ export interface CostByAgent {
   subscriptionInputTokens: number;
   subscriptionOutputTokens: number;
 }
+
+export interface CostSeriesPoint {
+  date: string;
+  costCents: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface CostByModel {
+  model: string;
+  provider: string;
+  costCents: number;
+  inputTokens: number;
+  outputTokens: number;
+}

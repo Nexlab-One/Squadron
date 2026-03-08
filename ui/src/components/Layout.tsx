@@ -6,6 +6,7 @@ import { CompanyRail } from "./CompanyRail";
 import { Sidebar } from "./Sidebar";
 import { SidebarNavItem } from "./SidebarNavItem";
 import { BreadcrumbBar } from "./BreadcrumbBar";
+import { UpdateBanner } from "./UpdateBanner";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { CommandPalette } from "./CommandPalette";
 import { NewIssueDialog } from "./NewIssueDialog";
@@ -13,6 +14,7 @@ import { NewProjectDialog } from "./NewProjectDialog";
 import { NewGoalDialog } from "./NewGoalDialog";
 import { NewAgentDialog } from "./NewAgentDialog";
 import { ToastViewport } from "./ToastViewport";
+import { LiveFeedStrip } from "./LiveFeedStrip";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { useDialog } from "../context/DialogContext";
 import { usePanel } from "../context/PanelContext";
@@ -187,7 +189,7 @@ export function Layout() {
     <div className="flex h-dvh bg-background text-foreground overflow-hidden pt-[env(safe-area-inset-top)]">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-200 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         Skip to Main Content
       </a>
@@ -274,6 +276,7 @@ export function Layout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
+        <UpdateBanner />
         <BreadcrumbBar />
         <div className="flex flex-1 min-h-0">
           <main
@@ -287,6 +290,7 @@ export function Layout() {
           <PropertiesPanel />
         </div>
       </div>
+      <LiveFeedStrip />
       {isMobile && <MobileBottomNav visible={mobileNavVisible} />}
       <CommandPalette />
       <NewIssueDialog />

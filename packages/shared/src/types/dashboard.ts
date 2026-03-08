@@ -10,6 +10,7 @@ export interface DashboardSummary {
     open: number;
     inProgress: number;
     blocked: number;
+    qualityReview: number;
     done: number;
   };
   costs: {

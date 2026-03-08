@@ -17,7 +17,7 @@ Every mutation in Paperclip is recorded in the activity log. This provides a com
 
 ### Web UI
 
-The Activity section in the sidebar shows a chronological feed of all events across the company. You can filter by:
+The **Activity** section in the sidebar shows a chronological feed of all events across the company. An optional **Live Feed** strip at the bottom of the board merges recent activity, run status, and agent events in real time (and can hydrate from the activity API when first opened). You can filter Activity by:
 
 - Agent
 - Entity type (issue, agent, approval)
