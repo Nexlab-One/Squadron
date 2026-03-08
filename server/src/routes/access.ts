@@ -100,7 +100,7 @@ function requestBaseUrl(req: Request) {
 
 function readSkillMarkdown(skillName: string): string | null {
   const normalized = skillName.trim().toLowerCase();
-  if (normalized !== "paperclip" && normalized !== "paperclip-create-agent")
+  if (normalized !== "squadron" && normalized !== "squadron-create-agent")
     return null;
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
@@ -1965,10 +1965,10 @@ export function accessRoutes(
   router.get("/skills/index", (_req, res) => {
     res.json({
       skills: [
-        { name: "paperclip", path: "/api/skills/paperclip" },
+        { name: "squadron", path: "/api/skills/squadron" },
         {
-          name: "paperclip-create-agent",
-          path: "/api/skills/paperclip-create-agent"
+          name: "squadron-create-agent",
+          path: "/api/skills/squadron-create-agent"
         }
       ]
     });

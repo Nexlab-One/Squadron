@@ -1,7 +1,7 @@
 ---
 name: release
 description: >
-  Coordinate a full Paperclip release across engineering, website publishing,
+  Coordinate a full Squadron release across engineering, website publishing,
   and social announcement. Use when CTO/CEO requests "do a release" or
   "release vX.Y.Z". Runs pre-flight checks, generates changelog via
   release-changelog, executes npm release, creates cross-project follow-up
@@ -10,7 +10,7 @@ description: >
 
 # Release Coordination Skill
 
-Run the full Paperclip release process as an organizational workflow, not just
+Run the full Squadron release process as an organizational workflow, not just
 an npm publish.
 
 This skill coordinates:
@@ -42,7 +42,7 @@ Before proceeding, verify all of the following:
 3. App repo working tree is clean.
 4. There are commits since the last release tag.
 5. You have release permissions (`npm whoami` succeeds for real publish).
-6. If running via Paperclip, you have issue context for posting status updates.
+6. If running via Squadron, you have issue context for posting status updates.
 
 If any precondition fails, stop and report the blocker.
 
@@ -52,7 +52,7 @@ If any precondition fails, stop and report the blocker.
 
 Collect these inputs up front:
 
-- Release request source issue (if in Paperclip)
+- Release request source issue (if in Squadron)
 - Requested bump (`patch|minor|major`) or explicit version (`vX.Y.Z`)
 - Whether this run is dry-run or live publish
 - Company/project context for follow-up issue creation
@@ -70,8 +70,8 @@ any step, check whether it has already been completed:
 | Canary publish | `npm view paperclipai@{version}` succeeds | Skip canary publish. Proceed to smoke test. |
 | Smoke test | Manual or scripted verification | If canary already verified, proceed to promote. |
 | Promote | `git tag v{version}` exists | Skip promotion entirely. A tag means the version is already promoted to latest. |
-| Website task | Search Paperclip issues for "Publish release notes for v{version}" | Skip creation. Link the existing task. |
-| CMO task | Search Paperclip issues for "release announcement tweet for v{version}" | Skip creation. Link the existing task. |
+| Website task | Search Squadron issues for "Publish release notes for v{version}" | Skip creation. Link the existing task. |
+| CMO task | Search Squadron issues for "release announcement tweet for v{version}" | Skip creation. Link the existing task. |
 
 **The golden rule:** If a git tag `v{version}` already exists, the release is
 fully promoted. Only post-publish tasks (website, CMO, wrap-up) should proceed.
@@ -203,7 +203,7 @@ works end-to-end.
 Use the existing Docker smoke test infrastructure with the canary version:
 
 ```bash
-PAPERCLIPAI_VERSION=canary ./scripts/docker-onboard-smoke.sh
+SQUADRONAI_VERSION=canary ./scripts/docker-onboard-smoke.sh
 ```
 
 This builds a clean Ubuntu container, installs `paperclipai@canary` via npx, and
@@ -294,7 +294,7 @@ GET /api/companies/{companyId}/issues?q=announcement+tweet+v{version}
 If matching tasks already exist (check title contains the version), skip
 creation and link the existing tasks instead. Do not create duplicates.
 
-Create at least two tasks in Paperclip (only if they don't already exist):
+Create at least two tasks in Squadron (only if they don't already exist):
 
 1. Website task: publish changelog for `v{version}`
 2. CMO task: draft announcement tweet for `v{version}`
@@ -378,7 +378,7 @@ updated.
 
 ---
 
-## Paperclip API Notes (When Running in Agent Context)
+## Squadron API Notes (When Running in Agent Context)
 
 Use:
 - `GET /api/companies/{companyId}/projects` to resolve website/workspace project IDs.
@@ -386,8 +386,8 @@ Use:
 - `PATCH /api/issues/{issueId}` with comments for release progress.
 
 For issue-modifying calls, include:
-- `Authorization: Bearer $PAPERCLIP_API_KEY`
-- `X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID`
+- `Authorization: Bearer $SQUADRON_API_KEY`
+- `X-Squadron-Run-Id: $SQUADRON_RUN_ID`
 
 ---
 

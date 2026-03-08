@@ -12,6 +12,9 @@ export const API = {
   costs: `${API_PREFIX}/costs`,
   activity: `${API_PREFIX}/activity`,
   dashboard: `${API_PREFIX}/dashboard`,
+  /** Path for company-scoped workload: GET /api/companies/:companyId/workload */
+  workload: (companyId: string) =>
+    `${API_PREFIX}/companies/${companyId}/workload`,
   sidebarBadges: `${API_PREFIX}/sidebar-badges`,
   invites: `${API_PREFIX}/invites`,
   joinRequests: `${API_PREFIX}/join-requests`,

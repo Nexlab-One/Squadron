@@ -17,10 +17,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/paperclipai/paperclip.git",
+    "url": "https://github.com/Nexlab-One/Squadron.git",
     "directory": "cli"
   },
-  "homepage": "https://github.com/paperclipai/paperclip",
+  "homepage": "https://github.com/Nexlab-One/Squadron",
   "files": [
     "dist"
   ],

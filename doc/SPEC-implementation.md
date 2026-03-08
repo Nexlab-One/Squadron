@@ -71,6 +71,8 @@ V1 implementation extends this baseline into a company-centric, governance-aware
 - Budget settings and hard-stop enforcement
 - Board web UI for dashboard, org chart, tasks, agents, approvals, costs
 - Agent-facing API contract (task read/write, heartbeat report, cost report)
+- Company-scoped SSE stream (`GET /companies/:companyId/events`) for broad real-time updates (activity, heartbeat, agent events)
+- Workload/capacity API (`GET /companies/:companyId/workload`) for throttle signals (normal | throttle | shed | pause) so agents and gateways can back off when under load
 - Auditable activity log for all mutating actions
 
 ## 5.2 Out of Scope (V1)
@@ -493,14 +495,18 @@ Server behavior:
 - `PATCH /companies/:companyId/budgets`
 - `PATCH /agents/:agentId/budgets`
 
-## 10.8 Activity and Dashboard
+## 10.8 Activity, Dashboard, Real-Time Updates, and Workload
+
+This section covers activity log access, dashboard summary, the company-scoped real-time event stream (SSE), and the workload/capacity API for throttle signals.
 
 - `GET /companies/:companyId/activity`
 - `GET /companies/:companyId/dashboard`
 
-### 10.8.1 Company events stream (SSE)
+### 10.8.1 Company events stream (SSE) — broad real-time updates
 
-- `GET /companies/:companyId/events` — Server-Sent Events stream for live activity, heartbeat, and agent events for the given company. Auth at connection start only: board (session or local_trusted) or agent (Bearer token or query `?token=` for EventSource). Optional query `token` allows browser `EventSource(url)` to authenticate without custom headers; prefer HTTPS and short-lived tokens when using query auth. Response: `Content-Type: text/event-stream`; each event is `data: <JSON>\n\n` (connected, then `LiveEvent` objects); comment heartbeats every 30s. WebSocket remains at `GET /api/companies/:companyId/events/ws` for existing clients.
+Squadron provides **broad real-time updates** for a company via a Server-Sent Events (SSE) stream. Clients subscribe once and receive live activity, heartbeat run state changes, and agent lifecycle events for that company without polling.
+
+- `GET /companies/:companyId/events` — Server-Sent Events stream for live activity, heartbeat, and agent events for the given company. Auth at connection start only: board (session or local_trusted) or agent (Bearer token or query `?token=` for EventSource). Optional query `token` allows browser `EventSource(url)` to authenticate without custom headers; prefer HTTPS and short-lived tokens when using query auth. Response: `Content-Type: text/event-stream`; each event is `data: <JSON>\n\n` (initial connected payload, then `LiveEvent` objects); comment heartbeats every 30s to keep the connection alive. Use this endpoint for dashboards and UIs that need to stay in sync with activity, run status, and agent changes. WebSocket remains at `GET /api/companies/:companyId/events/ws` for existing clients.
 
 Dashboard payload must include:
 
@@ -509,6 +515,10 @@ Dashboard payload must include:
 - month-to-date spend and budget utilization
 - pending approvals count
 - stale task count
+
+### 10.8.2 Workload / capacity (throttle signals)
+
+- `GET /companies/:companyId/workload` — Returns company-scoped workload metrics and a single recommendation: `normal`, `throttle`, `shed`, or `pause`. Auth: same as dashboard (`assertCompanyAccess`); board may call any company, agent key only its own company. Response includes `timestamp`, `companyId`, `capacity` (active issues, active runs, error rate in window), `queue` (total pending, by status/priority, optional oldest age and estimated wait), `agents` (total, online, busy, idle, busy_ratio), `recommendation` (action, reason, details, submit_ok, suggested_delay_ms), and `thresholds` (current env-derived values). Agents and gateways should back off when `recommendation.action` is not `normal` and may honor `recommendation.suggested_delay_ms` before submitting new work. Thresholds are configured via env: `SQUADRON_WORKLOAD_QUEUE_DEPTH_NORMAL`, `SQUADRON_WORKLOAD_QUEUE_DEPTH_THROTTLE`, `SQUADRON_WORKLOAD_QUEUE_DEPTH_SHED`, `SQUADRON_WORKLOAD_BUSY_RATIO_THROTTLE`, `SQUADRON_WORKLOAD_BUSY_RATIO_SHED`, `SQUADRON_WORKLOAD_ERROR_RATE_THROTTLE`, `SQUADRON_WORKLOAD_ERROR_RATE_SHED`, `SQUADRON_WORKLOAD_RECENT_WINDOW_SECONDS`, `SQUADRON_WORKLOAD_ERROR_RATE_ENABLED`.
 
 ## 10.9 Error Semantics
 

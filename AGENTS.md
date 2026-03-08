@@ -5,7 +5,7 @@ Guidance for human and AI contributors working in this repository.
 ## 1. Purpose
 
 Squadron is a control plane for AI-agent companies (fork of [Paperclip](https://github.com/paperclipai/paperclip)).
-The current implementation target is V1 and is defined in `doc/SPEC-implementation.md`.
+The implementation contract is defined in `doc/SPEC-implementation.md`.
 
 ## 2. Read This First
 
@@ -18,7 +18,7 @@ Before making changes, read in this order:
 5. `doc/DATABASE.md`
 
 `doc/SPEC.md` is long-horizon product context.
-`doc/SPEC-implementation.md` is the concrete V1 build contract.
+`doc/SPEC-implementation.md` is the concrete build contract.
 
 ## 3. Repo Map
 

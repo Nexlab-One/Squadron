@@ -138,6 +138,12 @@ Expected:
 - `/api/health` returns `{"status":"ok"}`
 - `/api/companies` returns a JSON array
 
+Notable company-scoped endpoints (require auth and a valid `companyId`):
+
+- `GET /api/companies/:companyId/dashboard` — dashboard summary (agents, tasks, costs, approvals, stale count).
+- `GET /api/companies/:companyId/events` — Server-Sent Events (SSE) stream for broad real-time updates: activity, heartbeat run state, and agent lifecycle events for that company. Use for live UIs without polling.
+- `GET /api/companies/:companyId/workload` — workload/capacity metrics and throttle recommendation (`normal` | `throttle` | `shed` | `pause`). Agents and gateways can poll this to back off when the system is under load. See §10.8.2 in `doc/SPEC-implementation.md` and env vars `SQUADRON_WORKLOAD_*`.
+
 ## Reset Local Dev Database
 
 To wipe local dev data and start fresh:

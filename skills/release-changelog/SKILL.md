@@ -271,9 +271,9 @@ Output the changelog to `releases/v{version}.md` using this template:
 ### Before You Update
 
 1. **Back up your database.**
-   - SQLite: `cp paperclip.db paperclip.db.backup`
-   - Postgres: `pg_dump -Fc paperclip > paperclip-pre-{version}.dump`
-2. **Note your current version:** `paperclip --version`
+   - SQLite: `cp squadron.db squadron.db.backup`
+   - Postgres: `pg_dump -Fc squadron > squadron-pre-{version}.dump`
+2. **Note your current version:** `squadronai --version`
 
 ### After Updating
 
