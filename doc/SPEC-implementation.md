@@ -498,6 +498,10 @@ Server behavior:
 - `GET /companies/:companyId/activity`
 - `GET /companies/:companyId/dashboard`
 
+### 10.8.1 Company events stream (SSE)
+
+- `GET /companies/:companyId/events` — Server-Sent Events stream for live activity, heartbeat, and agent events for the given company. Auth at connection start only: board (session or local_trusted) or agent (Bearer token or query `?token=` for EventSource). Optional query `token` allows browser `EventSource(url)` to authenticate without custom headers; prefer HTTPS and short-lived tokens when using query auth. Response: `Content-Type: text/event-stream`; each event is `data: <JSON>\n\n` (connected, then `LiveEvent` objects); comment heartbeats every 30s. WebSocket remains at `GET /api/companies/:companyId/events/ws` for existing clients.
+
 Dashboard payload must include:
 
 - active/running/paused/error agent counts

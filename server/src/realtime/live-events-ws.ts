@@ -1,13 +1,11 @@
-import { createHash } from "node:crypto";
 import type { IncomingMessage, Server as HttpServer } from "node:http";
 import { createRequire } from "node:module";
 import type { Duplex } from "node:stream";
-import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { agentApiKeys, companyMemberships, instanceUserRoles } from "@paperclipai/db";
 import type { DeploymentMode } from "@paperclipai/shared";
 import type { BetterAuthSessionResult } from "../auth/better-auth.js";
 import { logger } from "../middleware/logger.js";
+import { authorizeCompanyEventsAccess } from "./company-events-auth.js";
 import { subscribeCompanyLiveEvents } from "../services/live-events.js";
 
 interface WsSocket {
@@ -40,18 +38,8 @@ const { WebSocket, WebSocketServer } = require("ws") as {
   WebSocketServer: new (opts: { noServer: boolean }) => WsServer;
 };
 
-interface UpgradeContext {
-  companyId: string;
-  actorType: "board" | "agent";
-  actorId: string;
-}
-
 interface IncomingMessageWithContext extends IncomingMessage {
-  paperclipUpgradeContext?: UpgradeContext;
-}
-
-function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
+  paperclipUpgradeContext?: import("./company-events-auth.js").CompanyEventsContext;
 }
 
 function rejectUpgrade(socket: Duplex, statusLine: string, message: string) {
@@ -101,78 +89,21 @@ async function authorizeUpgrade(
     deploymentMode: DeploymentMode;
     resolveSessionFromHeaders?: (headers: Headers) => Promise<BetterAuthSessionResult | null>;
   },
-): Promise<UpgradeContext | null> {
+) {
   const queryToken = url.searchParams.get("token")?.trim() ?? "";
   const authToken = parseBearerToken(req.headers.authorization);
   const token = authToken ?? (queryToken.length > 0 ? queryToken : null);
+  const session =
+    opts.resolveSessionFromHeaders != null
+      ? await opts.resolveSessionFromHeaders(headersFromIncomingMessage(req))
+      : null;
+  const sessionUserId = session?.user?.id ?? null;
 
-  // Browser board context has no bearer token in local_trusted and authenticated modes.
-  if (!token) {
-    if (opts.deploymentMode === "local_trusted") {
-      return {
-        companyId,
-        actorType: "board",
-        actorId: "board",
-      };
-    }
-
-    if (opts.deploymentMode !== "authenticated" || !opts.resolveSessionFromHeaders) {
-      return null;
-    }
-
-    const session = await opts.resolveSessionFromHeaders(headersFromIncomingMessage(req));
-    const userId = session?.user?.id;
-    if (!userId) return null;
-
-    const [roleRow, memberships] = await Promise.all([
-      db
-        .select({ id: instanceUserRoles.id })
-        .from(instanceUserRoles)
-        .where(and(eq(instanceUserRoles.userId, userId), eq(instanceUserRoles.role, "instance_admin")))
-        .then((rows) => rows[0] ?? null),
-      db
-        .select({ companyId: companyMemberships.companyId })
-        .from(companyMemberships)
-        .where(
-          and(
-            eq(companyMemberships.principalType, "user"),
-            eq(companyMemberships.principalId, userId),
-            eq(companyMemberships.status, "active"),
-          ),
-        ),
-    ]);
-
-    const hasCompanyMembership = memberships.some((row) => row.companyId === companyId);
-    if (!roleRow && !hasCompanyMembership) return null;
-
-    return {
-      companyId,
-      actorType: "board",
-      actorId: userId,
-    };
-  }
-
-  const tokenHash = hashToken(token);
-  const key = await db
-    .select()
-    .from(agentApiKeys)
-    .where(and(eq(agentApiKeys.keyHash, tokenHash), isNull(agentApiKeys.revokedAt)))
-    .then((rows) => rows[0] ?? null);
-
-  if (!key || key.companyId !== companyId) {
-    return null;
-  }
-
-  await db
-    .update(agentApiKeys)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(agentApiKeys.id, key.id));
-
-  return {
-    companyId,
-    actorType: "agent",
-    actorId: key.agentId,
-  };
+  return authorizeCompanyEventsAccess(db, companyId, {
+    deploymentMode: opts.deploymentMode,
+    token,
+    sessionUserId,
+  });
 }
 
 export function setupLiveEventsWebSocketServer(

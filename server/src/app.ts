@@ -24,6 +24,7 @@ import { sidebarBadgeRoutes } from "./routes/sidebar-badges.js";
 import { llmRoutes } from "./routes/llms.js";
 import { assetRoutes } from "./routes/assets.js";
 import { accessRoutes } from "./routes/access.js";
+import { createCompanyEventsSSEHandler } from "./routes/events-sse.js";
 import type { BetterAuthSessionResult } from "./auth/better-auth.js";
 
 type UiMode = "none" | "static" | "vite-dev";
@@ -98,6 +99,13 @@ export async function createApp(
       deploymentExposure: opts.deploymentExposure,
       authReady: opts.authReady,
       companyDeletionEnabled: opts.companyDeletionEnabled,
+    }),
+  );
+  api.get(
+    "/companies/:companyId/events",
+    createCompanyEventsSSEHandler(db, {
+      deploymentMode: opts.deploymentMode,
+      resolveSession: opts.resolveSession,
     }),
   );
   api.use("/companies", companyRoutes(db));
