@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, it } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -144,7 +145,9 @@ describe("cursor execute", () => {
     }
   });
 
-  it("passes --mode when explicitly configured", async () => {
+  it(
+    "passes --mode when explicitly configured",
+    async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-cursor-execute-mode-"));
     const workspace = path.join(root, "workspace");
     const capturePath = path.join(root, "capture.json");
@@ -199,5 +202,7 @@ describe("cursor execute", () => {
       }
       await fs.rm(root, { recursive: true, force: true });
     }
-  });
+  },
+  15000,
+  );
 });

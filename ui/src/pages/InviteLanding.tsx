@@ -6,20 +6,16 @@ import { authApi } from "../api/auth";
 import { healthApi } from "../api/health";
 import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
-import { getDefaultAdapterTypesForUI } from "@paperclipai/shared";
+import { AGENT_ADAPTER_TYPES, type AgentAdapterType } from "@paperclipai/shared";
 import type { JoinRequest } from "@paperclipai/shared";
 
 type JoinType = "human" | "agent";
-const joinAdapterOptions: string[] = [
-  "openclaw",
-  ...getDefaultAdapterTypesForUI().filter((t) => t !== "openclaw"),
-];
+const joinAdapterOptions: AgentAdapterType[] = [...AGENT_ADAPTER_TYPES];
 
 const adapterLabels: Record<string, string> = {
   claude_local: "Claude (local)",
   codex_local: "Codex (local)",
   opencode_local: "OpenCode (local)",
-  openclaw: "OpenClaw",
   openclaw_gateway: "OpenClaw Gateway",
   cursor: "Cursor (local)",
   process: "Process",
