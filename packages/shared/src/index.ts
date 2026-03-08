@@ -143,6 +143,9 @@ export type {
   AgentEnvConfig,
   CompanySecret,
   SecretProviderDescriptor,
+  WebhookDelivery,
+  ConnectResponse,
+  WorkItemsResponse,
 } from "./types/index.js";
 
 export { LIVE_FEED_FILTERS } from "./types/live-feed.js";
@@ -235,6 +238,10 @@ export {
   type ClaimJoinRequestApiKey,
   type UpdateMemberPermissions,
   type UpdateUserCompanyAccess,
+  webhookDeliveryRetrySchema,
+  type WebhookDeliveryRetry,
+  connectSchema,
+  type ConnectRequest,
   portabilityIncludeSchema,
   portabilitySecretRequirementSchema,
   portabilityCompanyManifestEntrySchema,

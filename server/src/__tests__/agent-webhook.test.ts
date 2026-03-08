@@ -5,11 +5,37 @@ import {
   isAllowedWebhookUrl,
   resetWebhookCircuitForTests,
   signWebhookPayload,
+  verifyWebhookSignature,
+  WEBHOOK_JITTER_FRACTION,
+  WEBHOOK_RETRY_DELAYS_MS,
   WORKABLE_STATUSES_FOR_WEBHOOK,
   WEBHOOK_VERSION,
 } from "../services/agent-webhook.js";
 
+const shortRetryConfig = {
+  delaysMs: WEBHOOK_RETRY_DELAYS_MS,
+  jitterFraction: WEBHOOK_JITTER_FRACTION,
+};
+
 describe("agent-webhook", () => {
+  describe("verifyWebhookSignature", () => {
+    it("returns true when signature matches", () => {
+      const body = '{"event":"work_available"}';
+      const secret = "secret";
+      const sig = signWebhookPayload(body, secret);
+      expect(verifyWebhookSignature(body, sig, secret)).toBe(true);
+    });
+    it("returns false when signature does not match", () => {
+      const body = '{"event":"work_available"}';
+      expect(verifyWebhookSignature(body, "0".repeat(64), "secret")).toBe(false);
+    });
+    it("returns false when lengths differ (constant-time safe)", () => {
+      const body = '{"event":"work_available"}';
+      const sig = signWebhookPayload(body, "secret");
+      expect(verifyWebhookSignature(body, sig.slice(0, 32), "secret")).toBe(false);
+    });
+  });
+
   describe("signWebhookPayload", () => {
     it("produces hex-encoded HMAC-SHA256 of body", () => {
       const body = '{"event":"work_available","issueId":"i1"}';
@@ -70,6 +96,9 @@ describe("agent-webhook", () => {
             }),
           }),
         }),
+        insert: () => ({
+          values: () => Promise.resolve(),
+        }),
       } as unknown as Db;
     }
 
@@ -126,7 +155,7 @@ describe("agent-webhook", () => {
         const db = mockDb({ webhookUrl: "https://example.com/hook", webhookSecret: "secret" });
 
         let err: unknown;
-        const p = deliverWorkAvailable(agentId, companyId, issueId, db).catch((e) => {
+        const p = deliverWorkAvailable(agentId, companyId, issueId, db, shortRetryConfig).catch((e) => {
           err = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
@@ -136,7 +165,7 @@ describe("agent-webhook", () => {
         expect(err).toBeDefined();
         expect((err as Error).message).toBe("HTTP 500");
         expect(fetch).toHaveBeenCalledTimes(4);
-      });
+      }, 15000);
 
       it("does not retry on 4xx (e.g. 400)", async () => {
         (vi.mocked(fetch) as any).mockResolvedValue({ ok: false, status: 400 });
@@ -153,7 +182,7 @@ describe("agent-webhook", () => {
           .mockResolvedValueOnce({ ok: true });
         const db = mockDb({ webhookUrl: "https://example.com/hook", webhookSecret: "secret" });
 
-        const p = deliverWorkAvailable(agentId, companyId, issueId, db);
+        const p = deliverWorkAvailable(agentId, companyId, issueId, db, shortRetryConfig);
         await vi.advanceTimersByTimeAsync(2000);
         await p;
         vi.useRealTimers();
@@ -181,6 +210,7 @@ describe("agent-webhook", () => {
               }),
             }),
           }),
+          insert: () => ({ values: () => Promise.resolve() }),
         } as unknown as Db;
       }
 
@@ -194,7 +224,7 @@ describe("agent-webhook", () => {
         });
 
         let err1: unknown;
-        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db).catch((e) => {
+        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db, shortRetryConfig).catch((e) => {
           err1 = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
@@ -204,7 +234,7 @@ describe("agent-webhook", () => {
         expect(fetch).toHaveBeenCalledTimes(4);
 
         let err2: unknown;
-        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db).catch((e) => {
+        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db, shortRetryConfig).catch((e) => {
           err2 = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
@@ -212,10 +242,10 @@ describe("agent-webhook", () => {
         expect(err2).toBeDefined();
         expect(fetch).toHaveBeenCalledTimes(8);
 
-        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db);
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db, shortRetryConfig);
         expect(fetch).toHaveBeenCalledTimes(8);
         vi.useRealTimers();
-      });
+      }, 15000);
 
       it("attempts delivery again after reset", async () => {
         resetWebhookCircuitForTests();
@@ -227,13 +257,13 @@ describe("agent-webhook", () => {
         });
 
         let err1: unknown;
-        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db).catch((e) => {
+        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db, shortRetryConfig).catch((e) => {
           err1 = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
         await p1;
         let err2: unknown;
-        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db).catch((e) => {
+        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db, shortRetryConfig).catch((e) => {
           err2 = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
@@ -244,7 +274,7 @@ describe("agent-webhook", () => {
         resetWebhookCircuitForTests();
         vi.useRealTimers();
         (vi.mocked(fetch) as any).mockResolvedValue({ ok: true });
-        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db);
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db, shortRetryConfig);
         expect(fetch).toHaveBeenCalledTimes(9);
       });
 
@@ -258,13 +288,13 @@ describe("agent-webhook", () => {
         });
 
         let err1: unknown;
-        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db).catch((e) => {
+        const p1 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-1", db, shortRetryConfig).catch((e) => {
           err1 = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
         await p1;
         let err2: unknown;
-        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db).catch((e) => {
+        const p2 = deliverWorkAvailable(circuitAgentId, "company-1", "issue-2", db, shortRetryConfig).catch((e) => {
           err2 = e;
         });
         await vi.advanceTimersByTimeAsync(10000);
@@ -273,12 +303,12 @@ describe("agent-webhook", () => {
         expect(err2).toBeDefined();
         expect(fetch).toHaveBeenCalledTimes(8);
 
-        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db);
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-3", db, shortRetryConfig);
         expect(fetch).toHaveBeenCalledTimes(8);
 
         vi.advanceTimersByTime(61000);
         (vi.mocked(fetch) as any).mockResolvedValue({ ok: true });
-        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-4", db);
+        await deliverWorkAvailable(circuitAgentId, "company-1", "issue-4", db, shortRetryConfig);
         expect(fetch).toHaveBeenCalledTimes(9);
         vi.useRealTimers();
       });

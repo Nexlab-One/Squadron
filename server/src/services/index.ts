@@ -13,6 +13,7 @@ export { heartbeatService } from "./heartbeat.js";
 export {
   deliverWorkAvailable,
   WORKABLE_STATUSES_FOR_WEBHOOK,
+  verifyWebhookSignature,
 } from "./agent-webhook.js";
 export { dashboardService } from "./dashboard.js";
 export { standupService } from "./standup.js";

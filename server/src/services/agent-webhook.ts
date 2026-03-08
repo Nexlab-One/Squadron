@@ -1,12 +1,22 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Db } from "@paperclipai/db";
-import { agents } from "@paperclipai/db";
+import { agents, webhookDeliveries } from "@paperclipai/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../middleware/logger.js";
 
 export const WORKABLE_STATUSES_FOR_WEBHOOK = ["todo", "in_progress"] as const;
 export const WEBHOOK_RETRY_DELAYS_MS = [1000, 2000, 4000];
+/** MC-style exponential backoff: 30s → 5m → 30m → 2h → 8h */
+export const WEBHOOK_RETRY_DELAYS_MS_LONG = [
+  30_000,
+  300_000,
+  1_800_000,
+  7_200_000,
+  28_800_000,
+];
 export const WEBHOOK_VERSION = 1;
+
+const RESPONSE_BODY_EXCERPT_MAX = 500;
 
 /** Default jitter: ±20% on each retry delay to avoid thundering herd. */
 export const WEBHOOK_JITTER_FRACTION = 0.2;
@@ -26,7 +36,7 @@ export type WebhookRetryConfig = {
 };
 
 const DEFAULT_RETRY_CONFIG: WebhookRetryConfig = {
-  delaysMs: WEBHOOK_RETRY_DELAYS_MS,
+  delaysMs: WEBHOOK_RETRY_DELAYS_MS_LONG,
   jitterFraction: WEBHOOK_JITTER_FRACTION,
 };
 
@@ -150,6 +160,22 @@ export function signWebhookPayload(rawBody: string, secret: string): string {
   return createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
 }
 
+/**
+ * Constant-time verification of webhook signature. Use for server-side checks or tests.
+ * Receivers must use constant-time comparison; this helper uses timingSafeEqual.
+ */
+export function verifyWebhookSignature(
+  rawBody: string,
+  signatureHeader: string,
+  secret: string,
+): boolean {
+  const expected = signWebhookPayload(rawBody, secret);
+  const a = Buffer.from(signatureHeader, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 export async function deliverWorkAvailable(
   agentId: string,
   companyId: string,
@@ -204,6 +230,7 @@ export async function deliverWorkAvailable(
   let lastWasNetworkOrTimeout = false;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const startMs = Date.now();
     try {
       const response = await fetch(webhookUrl, {
         method: "POST",
@@ -213,6 +240,30 @@ export async function deliverWorkAvailable(
       });
       lastStatus = response.status;
       lastWasNetworkOrTimeout = false;
+      const durationMs = Date.now() - startMs;
+      let responseBodyExcerpt: string | null = null;
+      if (!response.ok) {
+        try {
+          const bodyText = await response.text();
+          responseBodyExcerpt =
+            bodyText.length > RESPONSE_BODY_EXCERPT_MAX
+              ? bodyText.slice(0, RESPONSE_BODY_EXCERPT_MAX)
+              : bodyText;
+        } catch {
+          // ignore body read errors
+        }
+      }
+      await db.insert(webhookDeliveries).values({
+        companyId,
+        agentId,
+        issueId,
+        eventType: "work_available",
+        status: response.ok ? "success" : "failed",
+        httpStatusCode: response.status,
+        responseBodyExcerpt,
+        durationMs,
+        attemptNumber: attempt + 1,
+      });
       if (response.ok) {
         recordSuccess(agentId);
         return;
@@ -234,6 +285,18 @@ export async function deliverWorkAvailable(
     } catch (err) {
       lastError = err;
       lastWasNetworkOrTimeout = lastStatus === undefined;
+      const durationMs = Date.now() - startMs;
+      await db.insert(webhookDeliveries).values({
+        companyId,
+        agentId,
+        issueId,
+        eventType: "work_available",
+        status: "failed",
+        httpStatusCode: lastStatus ?? null,
+        responseBodyExcerpt: null,
+        durationMs,
+        attemptNumber: attempt + 1,
+      });
       recordFailure(agentId);
       if (attempt < maxAttempts - 1 && isRetriable(lastStatus, lastWasNetworkOrTimeout)) {
         const delayMs = retryConfig.delaysMs[attempt] ?? retryConfig.delaysMs[retryConfig.delaysMs.length - 1]!;

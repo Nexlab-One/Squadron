@@ -84,6 +84,10 @@ V1 implementation extends this baseline into a company-centric, governance-aware
 - Multi-board governance or role-based human permission granularity
 - Automatic self-healing orchestration (auto-reassign/retry planners)
 
+### 5.2.1 Future: Role-based access (RBAC)
+
+When adding multiple human roles, use three levels: (1) **viewer** — read-only company data; (2) **operator** — viewer plus write tasks, agents, heartbeat; (3) **admin** — full company including settings and keys. Use MC-style role-based route guards and permission matrix as reference. Extend existing `companyMemberships` / `principalPermissionGrants` and `access.canUser` / `hasPermission`; keep company scoping and activity logging for all mutations.
+
 ## 6. Architecture
 
 ## 6.1 Runtime Components
@@ -532,6 +536,14 @@ Dashboard payload must include:
 ### 10.8.2 Workload / capacity (throttle signals)
 
 - `GET /companies/:companyId/workload` — Returns company-scoped workload metrics and a single recommendation: `normal`, `throttle`, `shed`, or `pause`. Auth: same as dashboard (`assertCompanyAccess`); board may call any company, agent key only its own company. Response includes `timestamp`, `companyId`, `capacity` (active issues, active runs, error rate in window), `queue` (total pending, by status/priority, optional oldest age and estimated wait), `agents` (total, online, busy, idle, busy_ratio), `recommendation` (action, reason, details, submit_ok, suggested_delay_ms), and `thresholds` (current env-derived values). Agents and gateways should back off when `recommendation.action` is not `normal` and may honor `recommendation.suggested_delay_ms` before submitting new work. Thresholds are configured via env: `SQUADRON_WORKLOAD_QUEUE_DEPTH_NORMAL`, `SQUADRON_WORKLOAD_QUEUE_DEPTH_THROTTLE`, `SQUADRON_WORKLOAD_QUEUE_DEPTH_SHED`, `SQUADRON_WORKLOAD_BUSY_RATIO_THROTTLE`, `SQUADRON_WORKLOAD_BUSY_RATIO_SHED`, `SQUADRON_WORKLOAD_ERROR_RATE_THROTTLE`, `SQUADRON_WORKLOAD_ERROR_RATE_SHED`, `SQUADRON_WORKLOAD_RECENT_WINDOW_SECONDS`, `SQUADRON_WORKLOAD_ERROR_RATE_ENABLED`.
+
+### 10.8.3 Connect (CLI)
+
+- `POST /companies/:companyId/connect` — Company-scoped CLI connect. Body: `toolName` (required), `toolVersion` (optional), `agentName` (required). Auth: board only (V1); `assertCompanyAccess` + `assertBoard`. Resolves agent by company and name (idempotent by name); if missing, creates an agent with `adapterType: process`, minimal config, and `metadata: { toolName, toolVersion }`. On create, a default API key is created and returned once as `apiKey`. Response: `agentId`, `heartbeatUrl` (e.g. `POST {baseUrl}/api/agents/:agentId/heartbeat/invoke`), `sseUrl` (e.g. `GET {baseUrl}/api/companies/:companyId/events`), `workItems: { tasks: Issue[] }`, and optionally `apiKey`. Base URL is derived from the request (Host / X-Forwarded-*) or `PAPERCLIP_PUBLIC_URL`. CLIs should call connect once, then use heartbeat and `GET /agents/:agentId/work-items` for their poll loop.
+
+### 10.8.4 Work-items
+
+- `GET /agents/:agentId/work-items` — Returns tasks assigned to the agent in workable status (`todo`, `in_progress`). Auth: agent may only request own `agentId`; board may request any agent in an accessible company. Response: `{ tasks: Issue[] }`. Used by CLIs and agents to drive their work loop; combine with heartbeat and SSE for live updates.
 
 ## 10.9 Error Semantics
 

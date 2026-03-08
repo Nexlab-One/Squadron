@@ -79,6 +79,8 @@ export type {
   JoinRequest,
   InstanceUserRoleGrant,
 } from "./access.js";
+export type { WebhookDelivery } from "./webhook-delivery.js";
+export type { ConnectResponse, WorkItemsResponse } from "./connect.js";
 export type {
   CompanyPortabilityInclude,
   CompanyPortabilitySecretRequirement,

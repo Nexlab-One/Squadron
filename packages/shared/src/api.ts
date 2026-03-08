@@ -18,6 +18,17 @@ export const API = {
   /** Path for company-scoped standup report: GET /api/companies/:companyId/standup */
   standup: (companyId: string) =>
     `${API_PREFIX}/companies/${companyId}/standup`,
+  /** Path for company-scoped webhook deliveries: GET/POST /api/companies/:companyId/webhook-deliveries */
+  webhookDeliveries: (companyId: string) =>
+    `${API_PREFIX}/companies/${companyId}/webhook-deliveries`,
+  webhookDeliveriesRetry: (companyId: string) =>
+    `${API_PREFIX}/companies/${companyId}/webhook-deliveries/retry`,
+  /** Company-scoped connect (CLI): POST /api/companies/:companyId/connect */
+  connect: (companyId: string) =>
+    `${API_PREFIX}/companies/${companyId}/connect`,
+  /** Agent work-items: GET /api/agents/:agentId/work-items */
+  workItems: (agentId: string) =>
+    `${API_PREFIX}/agents/${agentId}/work-items`,
   sidebarBadges: `${API_PREFIX}/sidebar-badges`,
   invites: `${API_PREFIX}/invites`,
   joinRequests: `${API_PREFIX}/join-requests`,

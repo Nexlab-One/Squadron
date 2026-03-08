@@ -44,14 +44,19 @@ When an issue is created or updated and the resulting issue has an agent assigne
 
 Algorithm: HMAC-SHA256 of the **raw request body** (as received, UTF-8), keyed by `webhookSecret`; output is hex-encoded.
 
-Node.js example:
+Receivers **must** use a **constant-time** comparison (e.g. `crypto.timingSafeEqual`) so that signature length or content does not leak via timing. Compare only when both buffers have the same length; otherwise return false without comparing.
+
+Node.js example (constant-time, length-checked):
 
 ```js
 const crypto = require("node:crypto");
 
 function verifyWebhookSignature(rawBody, signatureHeader, secret) {
   const expected = crypto.createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(signatureHeader, "hex"), Buffer.from(expected, "hex"));
+  const a = Buffer.from(signatureHeader, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 ```
 

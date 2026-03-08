@@ -1,0 +1,100 @@
+import { Router, type Request } from "express";
+import type { Db } from "@paperclipai/db";
+import { connectSchema, normalizeAgentUrlKey } from "@paperclipai/shared";
+import { validate } from "../middleware/validate.js";
+import { agentService, issueService, logActivity } from "../services/index.js";
+import { assertBoard, assertCompanyAccess, getActorInfo } from "./authz.js";
+
+function getBaseUrl(req: Request): string {
+  const fromRequest =
+    req.header("x-forwarded-proto")?.split(",")[0]?.trim() || req.protocol || "http";
+  const host =
+    req.header("x-forwarded-host")?.split(",")[0]?.trim() || req.header("host");
+  if (host) return `${fromRequest}://${host}`;
+  return process.env.PAPERCLIP_PUBLIC_URL ?? "";
+}
+
+export function connectRoutes(db: Db) {
+  const router = Router();
+  const svc = agentService(db);
+
+  router.post("/companies/:companyId/connect", validate(connectSchema), async (req, res) => {
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    assertBoard(req);
+
+    const { toolName, toolVersion, agentName } = req.body;
+    const resolved = await svc.resolveByReference(companyId, agentName);
+    let agent = resolved.agent;
+    if (resolved.ambiguous) {
+      const list = await svc.list(companyId);
+      const urlKey = normalizeAgentUrlKey(agentName);
+      const sameSlug = list.filter((a) => a.urlKey === urlKey);
+      const byTool =
+        toolName && sameSlug.length > 1
+          ? sameSlug.filter(
+              (a) =>
+                a.metadata &&
+                typeof a.metadata === "object" &&
+                (a.metadata as Record<string, unknown>).toolName === toolName,
+            )
+          : sameSlug;
+      if (byTool.length === 1) agent = byTool[0] ?? null;
+    }
+    const created = !agent;
+    if (!agent) {
+      agent = await svc.create(companyId, {
+        name: agentName,
+        role: "general",
+        adapterType: "process",
+        adapterConfig: {},
+        status: "idle",
+        spentMonthlyCents: 0,
+        lastHeartbeatAt: null,
+        metadata: { toolName, toolVersion: toolVersion ?? undefined },
+      });
+    }
+
+    const baseUrl = getBaseUrl(req);
+    const heartbeatUrl = baseUrl
+      ? `${baseUrl}/api/agents/${agent.id}/heartbeat/invoke`
+      : "";
+    const sseUrl = baseUrl ? `${baseUrl}/api/companies/${companyId}/events` : "";
+
+    let apiKey: string | undefined;
+    if (created) {
+      const key = await svc.createApiKey(agent.id, "connect");
+      apiKey = key.token;
+    }
+
+    const issueSvc = issueService(db);
+    const tasks = await issueSvc.list(companyId, {
+      assigneeAgentId: agent.id,
+      status: "todo,in_progress",
+    });
+    const workItems = { tasks };
+
+    const actor = getActorInfo(req);
+    await logActivity(db, {
+      companyId,
+      actorType: actor.actorType,
+      actorId: actor.actorId,
+      agentId: actor.agentId,
+      runId: actor.runId,
+      action: created ? "agent.created" : "connect.registered",
+      entityType: "agent",
+      entityId: agent.id,
+      details: created ? { name: agent.name, role: agent.role } : { agentName, toolName },
+    });
+
+    res.status(created ? 201 : 200).json({
+      agentId: agent.id,
+      heartbeatUrl,
+      sseUrl,
+      workItems,
+      ...(apiKey !== undefined && { apiKey }),
+    });
+  });
+
+  return router;
+}

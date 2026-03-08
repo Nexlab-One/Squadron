@@ -22,6 +22,8 @@ import { activityRoutes } from "./routes/activity.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { standupRoutes } from "./routes/standup.js";
 import { workloadRoutes } from "./routes/workload.js";
+import { webhookDeliveryRoutes } from "./routes/webhook-deliveries.js";
+import { connectRoutes } from "./routes/connect.js";
 import { sidebarBadgeRoutes } from "./routes/sidebar-badges.js";
 import { llmRoutes } from "./routes/llms.js";
 import { assetRoutes } from "./routes/assets.js";
@@ -125,6 +127,8 @@ export async function createApp(
   api.use(dashboardRoutes(db));
   api.use(standupRoutes(db));
   api.use(workloadRoutes(db));
+  api.use(webhookDeliveryRoutes(db));
+  api.use(connectRoutes(db));
   api.use(sidebarBadgeRoutes(db));
   api.use(
     accessRoutes(db, {

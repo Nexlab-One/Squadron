@@ -131,3 +131,9 @@ export {
   type UpdateMemberPermissions,
   type UpdateUserCompanyAccess,
 } from "./access.js";
+
+export {
+  webhookDeliveryRetrySchema,
+  type WebhookDeliveryRetry,
+} from "./webhook-delivery.js";
+export { connectSchema, type ConnectRequest } from "./connect.js";

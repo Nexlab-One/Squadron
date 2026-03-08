@@ -1170,6 +1170,26 @@ export function agentRoutes(db: Db) {
     res.json(keys);
   });
 
+  router.get("/agents/:id/work-items", async (req, res) => {
+    const id = req.params.id as string;
+    const agent = await svc.getById(id);
+    if (!agent) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    assertCompanyAccess(req, agent.companyId);
+    if (req.actor.type === "agent" && req.actor.agentId !== id) {
+      res.status(403).json({ error: "Agent can only request own work-items" });
+      return;
+    }
+    const issueSvc = issueService(db);
+    const tasks = await issueSvc.list(agent.companyId, {
+      assigneeAgentId: id,
+      status: "todo,in_progress",
+    });
+    res.json({ tasks });
+  });
+
   router.post("/agents/:id/keys", validate(createAgentKeySchema), async (req, res) => {
     assertBoard(req);
     const id = req.params.id as string;
