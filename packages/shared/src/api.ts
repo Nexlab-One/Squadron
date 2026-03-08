@@ -15,6 +15,9 @@ export const API = {
   /** Path for company-scoped workload: GET /api/companies/:companyId/workload */
   workload: (companyId: string) =>
     `${API_PREFIX}/companies/${companyId}/workload`,
+  /** Path for company-scoped standup report: GET /api/companies/:companyId/standup */
+  standup: (companyId: string) =>
+    `${API_PREFIX}/companies/${companyId}/standup`,
   sidebarBadges: `${API_PREFIX}/sidebar-badges`,
   invites: `${API_PREFIX}/invites`,
   joinRequests: `${API_PREFIX}/join-requests`,

@@ -53,6 +53,11 @@ export type {
   WorkloadResponse,
 } from "./workload.js";
 export type { ActivityEvent } from "./activity.js";
+export type {
+  StandupIssueSummary,
+  StandupAgentSection,
+  StandupReport,
+} from "./standup.js";
 export type { SidebarBadges } from "./sidebar-badges.js";
 export type {
   CompanyMembership,

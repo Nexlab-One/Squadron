@@ -501,6 +501,7 @@ This section covers activity log access, dashboard summary, the company-scoped r
 
 - `GET /companies/:companyId/activity`
 - `GET /companies/:companyId/dashboard`
+- `GET /companies/:companyId/standup` — Standup report: per-agent buckets (completed, in progress, assigned, review, blocked), team accomplishments (done in last 24h), blockers, and overdue (stale in-progress tasks, i.e. `started_at` older than 1h; issues have no due date in V1). Auth: same as dashboard (`assertCompanyAccess`).
 
 ### 10.8.1 Company events stream (SSE) — broad real-time updates
 

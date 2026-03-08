@@ -15,6 +15,7 @@ export {
   WORKABLE_STATUSES_FOR_WEBHOOK,
 } from "./agent-webhook.js";
 export { dashboardService } from "./dashboard.js";
+export { standupService } from "./standup.js";
 export { workloadService } from "./workload.js";
 export { sidebarBadgeService } from "./sidebar-badges.js";
 export { accessService } from "./access.js";
