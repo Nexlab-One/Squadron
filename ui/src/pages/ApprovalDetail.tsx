@@ -221,7 +221,7 @@ export function ApprovalDetail() {
           <ApprovalPayloadRenderer type={approval.type} payload={payload} />
           <button
             type="button"
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-2 cursor-pointer"
             onClick={() => setShowRawPayload((v) => !v)}
           >
             <ChevronRight className={`h-3 w-3 transition-transform ${showRawPayload ? "rotate-90" : ""}`} />
@@ -245,7 +245,7 @@ export function ApprovalDetail() {
                 <Link
                   key={issue.id}
                   to={`/issues/${issue.identifier ?? issue.id}`}
-                  className="block text-xs rounded border border-border/70 px-2 py-1.5 hover:bg-accent/20"
+                  className="block text-xs rounded border border-border/70 px-2 py-1.5 hover:bg-accent/20 cursor-pointer"
                 >
                   <span className="font-mono text-muted-foreground mr-2">
                     {issue.identifier ?? issue.id.slice(0, 8)}
@@ -324,7 +324,7 @@ export function ApprovalDetail() {
             <div key={comment.id} className="border border-border/60 rounded-md p-3">
               <div className="flex items-center justify-between mb-1">
                 {comment.authorAgentId ? (
-                  <Link to={`/agents/${comment.authorAgentId}`} className="hover:underline">
+                  <Link to={`/agents/${comment.authorAgentId}`} className="hover:underline cursor-pointer">
                     <Identity
                       name={agentNameById.get(comment.authorAgentId) ?? comment.authorAgentId.slice(0, 8)}
                       size="sm"

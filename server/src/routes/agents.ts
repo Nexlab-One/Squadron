@@ -61,7 +61,8 @@ export function agentRoutes(db: Db) {
   const svc = agentService(db);
   const access = accessService(db);
   const secretsSvc = secretService(db);
-  const strictSecretsMode = process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true";
+  const strictSecretsMode =
+    (process.env.SQUADRON_SECRETS_STRICT_MODE ?? process.env.PAPERCLIP_SECRETS_STRICT_MODE) === "true";
   const approvalAdapterDeps: ApprovalServiceAdapterDeps = {
     secretService: secretsSvc,
     assertAdapterTypeAllowed,

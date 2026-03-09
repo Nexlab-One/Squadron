@@ -284,7 +284,7 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                       key={goal.id}
                       className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs"
                     >
-                      <Link to={`/goals/${goal.id}`} className="hover:underline max-w-[140px] truncate">
+                      <Link to={`/goals/${goal.id}`} className="hover:underline max-w-[140px] truncate cursor-pointer">
                         {goal.title}
                       </Link>
                       {onUpdate && (
@@ -323,7 +323,7 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                       availableGoals.map((goal) => (
                         <button
                           key={goal.id}
-                          className="flex items-center w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50"
+                          className="flex items-center w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 cursor-pointer"
                           onClick={() => addGoal(goal.id)}
                         >
                           {goal.title}
@@ -391,7 +391,7 @@ export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps)
                         href={workspace.repoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                        className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
                       >
                         <Github className="h-3 w-3 shrink-0" />
                         <span className="truncate">{formatGitHubRepo(workspace.repoUrl)}</span>

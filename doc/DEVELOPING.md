@@ -94,7 +94,9 @@ See `doc/DOCKER.md` for API key wiring (`OPENAI_API_KEY` / `ANTHROPIC_API_KEY`) 
 For local development, leave `DATABASE_URL` unset.
 The server will automatically use embedded PostgreSQL and persist data at:
 
-- `~/.paperclip/instances/default/db`
+- `~/.squadron/instances/default/db` (or `%USERPROFILE%\.squadron\instances\default\db` on Windows)
+
+Squadron is a fork of Paperclip; the default data directory was changed from `~/.paperclip` to `~/.squadron`. Environment variables use the `SQUADRON_*` prefix as the canonical name (e.g. `SQUADRON_HOME`, `SQUADRON_CONFIG`, `SQUADRON_AGENT_JWT_SECRET`). The `PAPERCLIP_*` names are still read as fallbacks for backward compatibility; when both are set, `SQUADRON_*` wins.
 
 Override home and instance:
 
@@ -104,11 +106,16 @@ PAPERCLIP_HOME=/custom/path PAPERCLIP_INSTANCE_ID=dev pnpm paperclipai run
 
 No Docker or external database is required for this mode.
 
+To re-run the Get Started onboarding (e.g. after testing the setup flow), either:
+
+- **Reset embedded DB:** Remove the instance DB directory (e.g. `~/.squadron/instances/default/db` on Unix, or `%USERPROFILE%\.squadron\instances\default\db` on Windows), then start the server again. The app will create a fresh DB and show onboarding when there are no companies.
+- **Delete the company:** Use the API or UI to delete the company you created so that no companies remain; then open the dashboard and use "Get Started" (or refresh so onboarding opens automatically when `companies.length === 0`).
+
 ## Storage in Dev (Auto-Handled)
 
 For local development, the default storage provider is `local_disk`, which persists uploaded images/attachments at:
 
-- `~/.paperclip/instances/default/data/storage`
+- `~/.squadron/instances/default/data/storage`
 
 Configure storage provider/settings:
 
@@ -120,9 +127,9 @@ pnpm paperclipai configure --section storage
 
 When a local agent run has no resolved project/session workspace, Squadron falls back to an agent home workspace under the instance root:
 
-- `~/.paperclip/instances/default/workspaces/<agent-id>`
+- `~/.squadron/instances/default/workspaces/<agent-id>`
 
-This path honors `PAPERCLIP_HOME` and `PAPERCLIP_INSTANCE_ID` in non-default setups.
+This path honors `SQUADRON_HOME` (or `PAPERCLIP_HOME`) and `PAPERCLIP_INSTANCE_ID` in non-default setups.
 
 ## Quick Health Checks
 
@@ -137,7 +144,7 @@ Expected:
 
 - `/api/health` returns `{"status":"ok"}`
 - `/api/companies` returns a JSON array
-- `GET /api/releases/check` returns `{ currentVersion, latestVersion?, releasesUrl? }` for the update-available banner. Optional: set `SQUADRON_RELEASES_REPO=owner/repo` (default `paperclipai/paperclip`) or `SQUADRON_UPDATE_CHECK_DISABLED=1` to disable the check.
+- `GET /api/releases/check` returns `{ currentVersion, latestVersion?, releasesUrl? }` for the update-available banner. By default the server checks GitHub repo `Nexlab-One/Squadron` for the latest release. Override with `SQUADRON_RELEASES_REPO=owner/repo` or set `SQUADRON_UPDATE_CHECK_DISABLED=1` to disable the check.
 
 Notable company-scoped endpoints (require auth and a valid `companyId`):
 
@@ -150,7 +157,7 @@ Notable company-scoped endpoints (require auth and a valid `companyId`):
 To wipe local dev data and start fresh:
 
 ```sh
-rm -rf ~/.paperclip/instances/default/db
+rm -rf ~/.squadron/instances/default/db
 pnpm dev
 ```
 
@@ -165,7 +172,7 @@ Squadron can run automatic DB backups on a timer. Defaults:
 - enabled
 - every 60 minutes
 - retain 30 days
-- backup dir: `~/.paperclip/instances/default/data/backups`
+- backup dir: `~/.squadron/instances/default/data/backups`
 
 Configure these in:
 
@@ -192,7 +199,7 @@ Environment overrides:
 
 Agent env vars now support secret references. By default, secret values are stored with local encryption and only secret refs are persisted in agent config.
 
-- Default local key path: `~/.paperclip/instances/default/secrets/master.key`
+- Default local key path: `~/.squadron/instances/default/secrets/master.key`
 - Override key material directly: `PAPERCLIP_SECRETS_MASTER_KEY`
 - Override key file path: `PAPERCLIP_SECRETS_MASTER_KEY_FILE`
 

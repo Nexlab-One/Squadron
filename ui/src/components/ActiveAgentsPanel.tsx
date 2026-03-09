@@ -449,7 +449,7 @@ function AgentRunCard({
         </div>
         <Link
           to={`/agents/${run.agentId}/runs/${run.id}`}
-          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
         >
           <ExternalLink className="h-2.5 w-2.5" />
         </Link>
@@ -461,7 +461,7 @@ function AgentRunCard({
           <Link
             to={`/issues/${issue?.identifier ?? run.issueId}`}
             className={cn(
-              "hover:underline min-w-0 line-clamp-2 min-h-[2rem]",
+              "hover:underline min-w-0 line-clamp-2 min-h-[2rem] cursor-pointer",
               isActive ? "text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300" : "text-muted-foreground hover:text-foreground",
             )}
             title={issue?.title ? `${issue?.identifier ?? run.issueId.slice(0, 8)} - ${issue.title}` : issue?.identifier ?? run.issueId.slice(0, 8)}

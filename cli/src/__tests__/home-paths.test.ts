@@ -15,14 +15,21 @@ describe("home path resolution", () => {
     process.env = { ...ORIGINAL_ENV };
   });
 
-  it("defaults to ~/.paperclip and default instance", () => {
+  it("defaults to ~/.squadron and default instance", () => {
+    delete process.env.SQUADRON_HOME;
     delete process.env.PAPERCLIP_HOME;
     delete process.env.PAPERCLIP_INSTANCE_ID;
 
     const paths = describeLocalInstancePaths();
-    expect(paths.homeDir).toBe(path.resolve(os.homedir(), ".paperclip"));
+    expect(paths.homeDir).toBe(path.resolve(os.homedir(), ".squadron"));
     expect(paths.instanceId).toBe("default");
-    expect(paths.configPath).toBe(path.resolve(os.homedir(), ".paperclip", "instances", "default", "config.json"));
+    expect(paths.configPath).toBe(path.resolve(os.homedir(), ".squadron", "instances", "default", "config.json"));
+  });
+
+  it("prefers SQUADRON_HOME over PAPERCLIP_HOME", () => {
+    process.env.SQUADRON_HOME = "~/squadron-home";
+    process.env.PAPERCLIP_HOME = "~/paperclip-home";
+    expect(resolvePaperclipHomeDir()).toBe(path.resolve(os.homedir(), "squadron-home"));
   });
 
   it("supports PAPERCLIP_HOME and explicit instance ids", () => {

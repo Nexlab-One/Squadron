@@ -88,7 +88,7 @@ export function AgentProperties({ agent, runtimeState }: AgentPropertiesProps) {
         {agent.reportsTo && (
           <PropertyRow label="Reports To">
             {reportsToAgent ? (
-              <Link to={agentUrl(reportsToAgent)} className="hover:underline">
+              <Link to={agentUrl(reportsToAgent)} className="hover:underline cursor-pointer">
                 <Identity name={reportsToAgent.name} size="sm" />
               </Link>
             ) : (

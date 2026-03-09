@@ -84,7 +84,7 @@ function LiveFeedItemRow({
               {href ? (
                 <Link
                   to={href}
-                  className="font-medium text-foreground hover:underline truncate inline-block max-w-full align-bottom"
+                  className="font-medium text-foreground hover:underline truncate inline-block max-w-full align-bottom cursor-pointer"
                 >
                   {label}
                 </Link>
@@ -129,7 +129,7 @@ function LiveFeedItemRow({
               {href ? (
                 <Link
                   to={href}
-                  className="font-medium text-foreground hover:underline"
+                  className="font-medium text-foreground hover:underline cursor-pointer"
                 >
                   {name}
                 </Link>
@@ -157,7 +157,7 @@ function LiveFeedItemRow({
           {name}
           {" — "}
           {href ? (
-            <Link to={href} className="font-medium text-foreground hover:underline">
+            <Link to={href} className="font-medium text-foreground hover:underline cursor-pointer">
               {label}
             </Link>
           ) : (
@@ -222,7 +222,7 @@ export function LiveFeedStrip() {
         <button
           type="button"
           onClick={() => setStripOpen(!stripOpen)}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
           aria-expanded={stripOpen}
           aria-controls="live-feed-list"
         >

@@ -25,15 +25,19 @@ function parseNumber(value: string | undefined, fallback: number) {
   return Math.floor(parsed);
 }
 
+function squadronEnv(key: string): string | undefined {
+  return process.env[`SQUADRON_${key}`] ?? process.env[`PAPERCLIP_${key}`];
+}
+
 function jwtConfig() {
-  const secret = process.env.PAPERCLIP_AGENT_JWT_SECRET;
+  const secret = squadronEnv("AGENT_JWT_SECRET");
   if (!secret) return null;
 
   return {
     secret,
-    ttlSeconds: parseNumber(process.env.PAPERCLIP_AGENT_JWT_TTL_SECONDS, 60 * 60 * 48),
-    issuer: process.env.PAPERCLIP_AGENT_JWT_ISSUER ?? "paperclip",
-    audience: process.env.PAPERCLIP_AGENT_JWT_AUDIENCE ?? "paperclip-api",
+    ttlSeconds: parseNumber(squadronEnv("AGENT_JWT_TTL_SECONDS"), 60 * 60 * 48),
+    issuer: squadronEnv("AGENT_JWT_ISSUER") ?? "paperclip",
+    audience: squadronEnv("AGENT_JWT_AUDIENCE") ?? "paperclip-api",
   };
 }
 

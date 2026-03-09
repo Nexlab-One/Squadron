@@ -97,7 +97,7 @@ function CopyMarkdownButton({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="text-muted-foreground hover:text-foreground transition-colors"
+      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       title="Copy as markdown"
       onClick={() => {
         navigator.clipboard.writeText(text).then(() => {
@@ -136,7 +136,7 @@ const TimelineList = memo(function TimelineList({
           return (
             <div key={`run:${run.runId}`} className="border border-border bg-accent/20 p-3 overflow-hidden min-w-0 rounded-sm">
               <div className="flex items-center justify-between mb-2">
-                <Link to={`/agents/${run.agentId}`} className="hover:underline">
+                <Link to={`/agents/${run.agentId}`} className="hover:underline cursor-pointer">
                   <Identity
                     name={agentMap?.get(run.agentId)?.name ?? run.agentId.slice(0, 8)}
                     size="sm"
@@ -150,7 +150,7 @@ const TimelineList = memo(function TimelineList({
                 <span className="text-muted-foreground">Run</span>
                 <Link
                   to={`/agents/${run.agentId}/runs/${run.runId}`}
-                  className="inline-flex items-center rounded-md border border-border bg-accent/40 px-2 py-1 font-mono text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+                  className="inline-flex items-center rounded-md border border-border bg-accent/40 px-2 py-1 font-mono text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors cursor-pointer"
                 >
                   {run.runId.slice(0, 8)}
                 </Link>
@@ -182,7 +182,7 @@ const TimelineList = memo(function TimelineList({
               <span className="flex items-center gap-1.5">
                 <a
                   href={`#comment-${comment.id}`}
-                  className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors cursor-pointer"
                 >
                   {formatDateTime(comment.createdAt)}
                 </a>
@@ -195,7 +195,7 @@ const TimelineList = memo(function TimelineList({
                 {comment.runAgentId ? (
                   <Link
                     to={`/agents/${comment.runAgentId}/runs/${comment.runId}`}
-                    className="inline-flex items-center rounded-md border border-border bg-accent/30 px-2 py-1 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                    className="inline-flex items-center rounded-md border border-border bg-accent/30 px-2 py-1 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors cursor-pointer"
                   >
                     run {comment.runId.slice(0, 8)}
                   </Link>

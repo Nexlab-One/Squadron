@@ -11,7 +11,7 @@ function getBaseUrl(req: Request): string {
   const host =
     req.header("x-forwarded-host")?.split(",")[0]?.trim() || req.header("host");
   if (host) return `${fromRequest}://${host}`;
-  return process.env.PAPERCLIP_PUBLIC_URL ?? "";
+  return process.env.SQUADRON_PUBLIC_URL ?? process.env.PAPERCLIP_PUBLIC_URL ?? "";
 }
 
 export function connectRoutes(db: Db) {

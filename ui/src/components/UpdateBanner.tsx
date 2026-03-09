@@ -6,7 +6,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { cn } from "../lib/utils";
 
-const DISMISSED_STORAGE_KEY = "paperclip.update-banner.dismissedVersion";
+const DISMISSED_STORAGE_KEY = "squadron.update-banner.dismissedVersion";
 const STALE_TIME_MS = 30 * 60 * 1000; // 30 min
 
 function parseParts(s: string): number[] {
@@ -72,7 +72,7 @@ export function UpdateBanner() {
       className={cn(
         "flex items-center justify-center gap-2 px-3 py-2 text-sm",
         "bg-muted text-muted-foreground",
-        "border-b border-border",
+        "border border-border rounded-lg mx-4 md:mx-6 mt-2",
       )}
     >
       <span>

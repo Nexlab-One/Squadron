@@ -123,6 +123,7 @@ export function OnboardingWizard() {
   >(null);
   const [createdAgentId, setCreatedAgentId] = useState<string | null>(null);
   const [createdIssueRef, setCreatedIssueRef] = useState<string | null>(null);
+  const [skippedAgentStep, setSkippedAgentStep] = useState(false);
 
   // Sync step and company when onboarding opens with options.
   // Keep this independent from company-list refreshes so Step 1 completion
@@ -133,6 +134,7 @@ export function OnboardingWizard() {
     setStep(onboardingOptions.initialStep ?? 1);
     setCreatedCompanyId(cId);
     setCreatedCompanyPrefix(null);
+    setSkippedAgentStep(false);
   }, [
     onboardingOpen,
     onboardingOptions.companyId,
@@ -252,6 +254,7 @@ export function OnboardingWizard() {
     setCreatedCompanyPrefix(null);
     setCreatedAgentId(null);
     setCreatedIssueRef(null);
+    setSkippedAgentStep(false);
   }
 
   function handleClose() {
@@ -494,7 +497,6 @@ export function OnboardingWizard() {
   }
 
   async function handleLaunch() {
-    if (!createdAgentId) return;
     setLoading(true);
     setError(null);
     setLoading(false);
@@ -510,8 +512,10 @@ export function OnboardingWizard() {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      if (step === 1 && companyName.trim()) handleStep1Next();
-      else if (step === 2 && agentName.trim()) handleStep2Next();
+      if (step === 1) {
+        if (createdCompanyId) setStep(2);
+        else if (companyName.trim()) handleStep1Next();
+      } else if (step === 2 && agentName.trim()) handleStep2Next();
       else if (step === 3 && taskTitle.trim()) handleStep3Next();
       else if (step === 4) handleLaunch();
     }
@@ -535,7 +539,7 @@ export function OnboardingWizard() {
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 left-4 z-10 rounded-sm p-1.5 text-muted-foreground/60 hover:text-foreground transition-colors"
+            className="absolute top-4 left-4 z-10 rounded-sm p-1.5 text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
@@ -605,6 +609,11 @@ export function OnboardingWizard() {
                       onChange={(e) => setCompanyGoal(e.target.value)}
                     />
                   </div>
+                  {createdCompanyId && (
+                    <p className="text-xs text-muted-foreground">
+                      Company already created. You can continue to step 2 or close.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -688,10 +697,10 @@ export function OnboardingWizard() {
                           className={cn(
                             "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors relative",
                             opt.comingSoon
-                              ? "border-border opacity-40 cursor-not-allowed"
-                              : adapterType === opt.value
-                                ? "border-foreground bg-accent"
-                                : "border-border hover:bg-accent/50"
+? "border-border opacity-40 cursor-not-allowed"
+                                : adapterType === opt.value
+                                  ? "border-foreground bg-accent cursor-pointer"
+                                  : "border-border hover:bg-accent/50 cursor-pointer"
                           )}
                           onClick={() => {
                             if (opt.comingSoon) return;
@@ -766,7 +775,7 @@ export function OnboardingWizard() {
                           }}
                         >
                           <PopoverTrigger asChild>
-                            <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm hover:bg-accent/50 transition-colors w-full justify-between">
+                            <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm hover:bg-accent/50 transition-colors w-full justify-between cursor-pointer">
                               <span
                                 className={cn(
                                   !model && "text-muted-foreground"
@@ -796,7 +805,7 @@ export function OnboardingWizard() {
                             {adapterType !== "opencode_local" && (
                               <button
                                 className={cn(
-                                  "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-accent/50",
+                                  "flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-accent/50 cursor-pointer",
                                   !model && "bg-accent"
                                 )}
                                 onClick={() => {
@@ -819,7 +828,7 @@ export function OnboardingWizard() {
                                     <button
                                       key={m.id}
                                       className={cn(
-                                        "flex items-center w-full px-2 py-1.5 text-sm rounded hover:bg-accent/50",
+                                        "flex items-center w-full px-2 py-1.5 text-sm rounded hover:bg-accent/50 cursor-pointer",
                                         m.id === model && "bg-accent"
                                       )}
                                       onClick={() => {
@@ -1030,10 +1039,13 @@ export function OnboardingWizard() {
                       <Rocket className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Ready to launch</h3>
+                      <h3 className="font-medium">
+                        {skippedAgentStep ? "You're all set" : "Ready to launch"}
+                      </h3>
                       <p className="text-xs text-muted-foreground">
-                        Everything is set up. Your assigned task already woke
-                        the agent, so you can jump straight to the issue.
+                        {skippedAgentStep
+                          ? "Open your dashboard to add agents and tasks later."
+                          : "Everything is set up. Your assigned task already woke the agent, so you can jump straight to the issue."}
                       </p>
                     </div>
                   </div>
@@ -1048,28 +1060,32 @@ export function OnboardingWizard() {
                       </div>
                       <Check className="h-4 w-4 text-green-500 shrink-0" />
                     </div>
-                    <div className="flex items-center gap-3 px-3 py-2.5">
-                      <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {agentName}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getUIAdapter(adapterType).label}
-                        </p>
-                      </div>
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
-                    </div>
-                    <div className="flex items-center gap-3 px-3 py-2.5">
-                      <ListTodo className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {taskTitle}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Task</p>
-                      </div>
-                      <Check className="h-4 w-4 text-green-500 shrink-0" />
-                    </div>
+                    {!skippedAgentStep && (
+                      <>
+                        <div className="flex items-center gap-3 px-3 py-2.5">
+                          <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {agentName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {getUIAdapter(adapterType).label}
+                            </p>
+                          </div>
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-3 px-3 py-2.5">
+                          <ListTodo className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {taskTitle}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Task</p>
+                          </div>
+                          <Check className="h-4 w-4 text-green-500 shrink-0" />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -1088,7 +1104,10 @@ export function OnboardingWizard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setStep((step - 1) as Step)}
+                      onClick={() => {
+                        if (step === 4 && skippedAgentStep) setStep(2);
+                        else setStep((step - 1) as Step);
+                      }}
                       disabled={loading}
                     >
                       <ArrowLeft className="h-3.5 w-3.5 mr-1" />
@@ -1100,32 +1119,45 @@ export function OnboardingWizard() {
                   {step === 1 && (
                     <Button
                       size="sm"
-                      disabled={!companyName.trim() || loading}
-                      onClick={handleStep1Next}
+                      disabled={!createdCompanyId && (!companyName.trim() || loading)}
+                      onClick={createdCompanyId ? () => setStep(2) : handleStep1Next}
                     >
-                      {loading ? (
+                      {loading && !createdCompanyId ? (
                         <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                       ) : (
                         <ArrowRight className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Creating..." : "Next"}
+                      {loading && !createdCompanyId ? "Creating..." : "Next"}
                     </Button>
                   )}
                   {step === 2 && (
-                    <Button
-                      size="sm"
-                      disabled={
-                        !agentName.trim() || loading || adapterEnvLoading
-                      }
-                      onClick={handleStep2Next}
-                    >
-                      {loading ? (
-                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                      )}
-                      {loading ? "Creating..." : "Next"}
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={loading}
+                        onClick={() => {
+                          setSkippedAgentStep(true);
+                          setStep(4);
+                        }}
+                      >
+                        Skip for now
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={
+                          !agentName.trim() || loading || adapterEnvLoading
+                        }
+                        onClick={handleStep2Next}
+                      >
+                        {loading ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        ) : (
+                          <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        {loading ? "Creating..." : "Next"}
+                      </Button>
+                    </>
                   )}
                   {step === 3 && (
                     <Button
@@ -1148,7 +1180,7 @@ export function OnboardingWizard() {
                       ) : (
                         <ArrowRight className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Opening..." : "Open Issue"}
+                      {loading ? "Opening..." : skippedAgentStep ? "Open dashboard" : "Open Issue"}
                     </Button>
                   )}
                 </div>

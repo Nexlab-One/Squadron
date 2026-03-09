@@ -7,12 +7,13 @@ import {
 
 describe("openCode models", () => {
   afterEach(() => {
+    delete process.env.SQUADRON_OPENCODE_COMMAND;
     delete process.env.PAPERCLIP_OPENCODE_COMMAND;
     resetOpenCodeModelsCacheForTests();
   });
 
   it("returns an empty list when discovery command is unavailable", async () => {
-    process.env.PAPERCLIP_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
+    process.env.SQUADRON_OPENCODE_COMMAND = "__squadron_missing_opencode_command__";
     await expect(listOpenCodeModels()).resolves.toEqual([]);
   });
 
@@ -22,12 +23,16 @@ describe("openCode models", () => {
     ).rejects.toThrow("OpenCode requires `adapterConfig.model`");
   });
 
-  it("rejects when discovery cannot run for configured model", async () => {
-    process.env.PAPERCLIP_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
-    await expect(
-      ensureOpenCodeModelConfiguredAndAvailable({
-        model: "openai/gpt-5",
-      }),
-    ).rejects.toThrow("Failed to start command");
-  });
+  it(
+    "rejects when discovery cannot run for configured model",
+    async () => {
+      process.env.SQUADRON_OPENCODE_COMMAND = "__squadron_missing_opencode_command__";
+      await expect(
+        ensureOpenCodeModelConfiguredAndAvailable({
+          model: "openai/gpt-5",
+        }),
+      ).rejects.toThrow("Failed to start command");
+    },
+    25_000,
+  );
 });

@@ -162,7 +162,7 @@ export function NewAgentDialog() {
               {/* Advanced link */}
               <div className="text-center">
                 <button
-                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors cursor-pointer"
                   onClick={handleAdvancedConfig}
                 >
                   I want advanced configuration myself
@@ -173,7 +173,7 @@ export function NewAgentDialog() {
             <>
               <div className="space-y-2">
                 <button
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   onClick={() => setShowAdvancedCards(false)}
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -189,7 +189,7 @@ export function NewAgentDialog() {
                   <button
                     key={opt.value}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-md border border-border p-3 text-xs transition-colors hover:bg-accent/50 relative"
+                      "flex flex-col items-center gap-1.5 rounded-md border border-border p-3 text-xs transition-colors hover:bg-accent/50 relative cursor-pointer"
                     )}
                     onClick={() => handleAdvancedAdapterPick(opt.value)}
                   >

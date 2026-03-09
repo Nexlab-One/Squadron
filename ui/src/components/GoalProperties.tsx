@@ -128,7 +128,7 @@ export function GoalProperties({ goal, onUpdate }: GoalPropertiesProps) {
           {ownerAgent ? (
             <Link
               to={agentUrl(ownerAgent)}
-              className="text-sm hover:underline"
+              className="text-sm hover:underline cursor-pointer"
             >
               {ownerAgent.name}
             </Link>
@@ -141,7 +141,7 @@ export function GoalProperties({ goal, onUpdate }: GoalPropertiesProps) {
           <PropertyRow label="Parent Goal">
             <Link
               to={`/goals/${goal.parentId}`}
-              className="text-sm hover:underline"
+              className="text-sm hover:underline cursor-pointer"
             >
               {parentGoal?.title ?? goal.parentId.slice(0, 8)}
             </Link>

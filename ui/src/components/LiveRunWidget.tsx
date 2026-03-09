@@ -560,7 +560,7 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
               <span className="text-muted-foreground">Run</span>
               <Link
                 to={`/agents/${run.agentId}/runs/${run.id}`}
-                className="inline-flex items-center rounded-md border border-border bg-accent/40 px-2 py-1 font-mono text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+                className="inline-flex items-center rounded-md border border-border bg-accent/40 px-2 py-1 font-mono text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors cursor-pointer"
               >
                 {run.id.slice(0, 8)}
               </Link>
@@ -569,14 +569,14 @@ export function LiveRunWidget({ issueId, companyId }: LiveRunWidgetProps) {
                 <button
                   onClick={() => handleCancelRun(run.id)}
                   disabled={cancellingRunIds.has(run.id)}
-                  className="inline-flex items-center gap-1 text-[10px] text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-[10px] text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 cursor-pointer"
                 >
                   <Square className="h-2 w-2" fill="currentColor" />
                   {cancellingRunIds.has(run.id) ? "Stopping…" : "Stop"}
                 </button>
                 <Link
                   to={`/agents/${run.agentId}/runs/${run.id}`}
-                  className="inline-flex items-center gap-1 text-[10px] text-cyan-600 hover:text-cyan-500 dark:text-cyan-300 dark:hover:text-cyan-200"
+                  className="inline-flex items-center gap-1 text-[10px] text-cyan-600 hover:text-cyan-500 dark:text-cyan-300 dark:hover:text-cyan-200 cursor-pointer"
                 >
                   Open run
                   <ExternalLink className="h-2.5 w-2.5" />

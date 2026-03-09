@@ -304,7 +304,7 @@ export function IssuesList({
           {/* View mode toggle */}
           <div className="flex items-center border border-border rounded-md overflow-hidden mr-1">
             <button
-              className={`p-1.5 transition-colors ${viewState.viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              className={`p-1.5 transition-colors cursor-pointer ${viewState.viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => updateView({ viewMode: "list" })}
               title="List view"
             >
@@ -345,7 +345,7 @@ export function IssuesList({
                   <span className="text-sm font-medium">Filters</span>
                   {activeFilterCount > 0 && (
                     <button
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                       onClick={() => updateView({ statuses: [], priorities: [], assignees: [], labels: [] })}
                     >
                       Clear
@@ -669,7 +669,7 @@ export function IssuesList({
                     >
                       <PopoverTrigger asChild>
                         <button
-                          className="flex w-[180px] shrink-0 items-center rounded-md px-2 py-1 hover:bg-accent/50 transition-colors"
+                          className="flex w-[180px] shrink-0 items-center rounded-md px-2 py-1 hover:bg-accent/50 transition-colors cursor-pointer"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();

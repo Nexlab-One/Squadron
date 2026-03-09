@@ -1130,7 +1130,7 @@ export function DesignGuide() {
               <ListTodo className="h-3.5 w-3.5 inline mr-1" />
               List
             </button>
-            <button className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/50 rounded-r-md">
+            <button className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/50 rounded-r-md cursor-pointer">
               <Target className="h-3.5 w-3.5 inline mr-1" />
               Org
             </button>

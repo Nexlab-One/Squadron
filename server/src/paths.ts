@@ -10,7 +10,7 @@ function findConfigFileFromAncestors(startDir: string): string | null {
   let currentDir = absoluteStartDir;
 
   while (true) {
-    const candidate = path.resolve(currentDir, ".paperclip", PAPERCLIP_CONFIG_BASENAME);
+    const candidate = path.resolve(currentDir, ".squadron", PAPERCLIP_CONFIG_BASENAME);
     if (fs.existsSync(candidate)) {
       return candidate;
     }

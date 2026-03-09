@@ -290,7 +290,7 @@ export function NewProjectDialog() {
             <button
               type="button"
               className={cn(
-                "rounded-lg border px-3 py-3 text-left transition-colors",
+                "rounded-lg border px-3 py-3 text-left transition-colors cursor-pointer",
                 workspaceSetup === "local" ? "border-foreground bg-accent/40" : "border-border hover:bg-accent/30",
               )}
               onClick={() => toggleWorkspaceSetup("local")}
@@ -304,7 +304,7 @@ export function NewProjectDialog() {
             <button
               type="button"
               className={cn(
-                "rounded-lg border px-3 py-3 text-left transition-colors",
+                "rounded-lg border px-3 py-3 text-left transition-colors cursor-pointer",
                 workspaceSetup === "repo" ? "border-foreground bg-accent/40" : "border-border hover:bg-accent/30",
               )}
               onClick={() => toggleWorkspaceSetup("repo")}
@@ -318,7 +318,7 @@ export function NewProjectDialog() {
             <button
               type="button"
               className={cn(
-                "rounded-lg border px-3 py-3 text-left transition-colors",
+                "rounded-lg border px-3 py-3 text-left transition-colors cursor-pointer",
                 workspaceSetup === "both" ? "border-foreground bg-accent/40" : "border-border hover:bg-accent/30",
               )}
               onClick={() => toggleWorkspaceSetup("both")}
@@ -366,7 +366,7 @@ export function NewProjectDialog() {
           {/* Status */}
           <Popover open={statusOpen} onOpenChange={setStatusOpen}>
             <PopoverTrigger asChild>
-              <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent/50 transition-colors">
+              <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent/50 transition-colors cursor-pointer">
                 <StatusBadge status={status} />
               </button>
             </PopoverTrigger>
@@ -375,7 +375,7 @@ export function NewProjectDialog() {
                 <button
                   key={s.value}
                   className={cn(
-                    "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50",
+                    "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 cursor-pointer",
                     s.value === status && "bg-accent"
                   )}
                   onClick={() => { setStatus(s.value); setStatusOpen(false); }}
@@ -394,7 +394,7 @@ export function NewProjectDialog() {
               <Target className="h-3 w-3 text-muted-foreground" />
               <span className="max-w-[160px] truncate">{goal.title}</span>
               <button
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
                 onClick={() => setGoalIds((prev) => prev.filter((id) => id !== goal.id))}
                 aria-label={`Remove goal ${goal.title}`}
                 type="button"
@@ -407,7 +407,7 @@ export function NewProjectDialog() {
           <Popover open={goalOpen} onOpenChange={setGoalOpen}>
             <PopoverTrigger asChild>
               <button
-                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent/50 transition-colors disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent/50 transition-colors disabled:opacity-60 cursor-pointer"
                 disabled={selectedGoals.length > 0 && availableGoals.length === 0}
               >
                 {selectedGoals.length > 0 ? <Plus className="h-3 w-3 text-muted-foreground" /> : <Target className="h-3 w-3 text-muted-foreground" />}
@@ -417,7 +417,7 @@ export function NewProjectDialog() {
             <PopoverContent className="w-56 p-1" align="start">
               {selectedGoals.length === 0 && (
                 <button
-                  className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-muted-foreground"
+                  className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-muted-foreground cursor-pointer"
                   onClick={() => setGoalOpen(false)}
                 >
                   No goal
@@ -426,7 +426,7 @@ export function NewProjectDialog() {
               {availableGoals.map((g) => (
                 <button
                   key={g.id}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 truncate"
+                  className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 truncate cursor-pointer"
                   onClick={() => {
                     setGoalIds((prev) => [...prev, g.id]);
                     setGoalOpen(false);

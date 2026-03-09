@@ -18,7 +18,7 @@ function IssueLink({ issue }: { issue: StandupIssueSummary }) {
   return (
     <Link
       to={to}
-      className="flex items-center gap-2 py-1.5 text-sm hover:bg-accent/50 rounded px-2 -mx-2 no-underline text-inherit"
+      className="flex items-center gap-2 py-1.5 text-sm hover:bg-accent/50 rounded px-2 -mx-2 no-underline text-inherit cursor-pointer"
     >
       <StatusIcon status={issue.status} className="shrink-0" />
       <span className="truncate min-w-0 flex-1">{issue.title}</span>
@@ -178,7 +178,7 @@ export function Standup() {
                       <li key={issue.id}>
                         <Link
                           to={`/issues/${issue.identifier ?? issue.id}`}
-                          className="flex items-center gap-2 py-1.5 text-sm hover:bg-accent/50 rounded px-2 -mx-2 no-underline text-inherit"
+                          className="flex items-center gap-2 py-1.5 text-sm hover:bg-accent/50 rounded px-2 -mx-2 no-underline text-inherit cursor-pointer"
                         >
                           <StatusIcon status={issue.status} className="shrink-0" />
                           <span className="truncate min-w-0 flex-1">{issue.title}</span>
@@ -219,7 +219,7 @@ export function Standup() {
                       <li key={issue.id}>
                         <Link
                           to={`/issues/${issue.identifier ?? issue.id}`}
-                          className="flex items-center gap-2 py-1.5 text-sm hover:bg-accent/50 rounded px-2 -mx-2 no-underline text-inherit"
+                          className="flex items-center gap-2 py-1.5 text-sm hover:bg-accent/50 rounded px-2 -mx-2 no-underline text-inherit cursor-pointer"
                         >
                           <StatusIcon status={issue.status} className="shrink-0" />
                           <span className="truncate min-w-0 flex-1">{issue.title}</span>

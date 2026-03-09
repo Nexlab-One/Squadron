@@ -444,7 +444,7 @@ export function AgentDetail() {
             value={agent.icon}
             onChange={(icon) => updateIcon.mutate(icon)}
           >
-            <button className="shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-accent hover:bg-accent/80 transition-colors">
+            <button className="shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-accent hover:bg-accent/80 transition-colors cursor-pointer">
               <AgentIcon icon={agent.icon} className="h-6 w-6" />
             </button>
           </AgentIconPicker>
@@ -558,7 +558,7 @@ export function AgentDetail() {
                 Reset Sessions
               </button>
               <button
-                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive cursor-pointer"
                 onClick={() => {
                   agentAction.mutate("terminate");
                   setMoreOpen(false);
@@ -725,7 +725,7 @@ function LatestRunCard({ runs, agentId }: { runs: HeartbeatRun[]; agentId: strin
         </h3>
         <Link
           to={`/agents/${agentId}/runs/${run.id}`}
-          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline"
+          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline cursor-pointer"
         >
           View details &rarr;
         </Link>
@@ -810,7 +810,7 @@ function AgentOverview({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Recent Issues</h3>
-          <Link to={`/issues?assignee=${agentId}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <Link to={`/issues?assignee=${agentId}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
             See All &rarr;
           </Link>
         </div>
@@ -885,7 +885,7 @@ function ConfigSummary({
         <h3 className="text-sm font-medium">Configuration</h3>
         <Link
           to={`/agents/${agentRouteId}/configure`}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline cursor-pointer"
         >
           <Settings className="h-3 w-3" />
           Manage &rarr;
@@ -1113,7 +1113,7 @@ function AgentConfigurePage({
       {/* Configuration Revisions — collapsible at the bottom */}
       <div>
         <button
-          className="flex items-center gap-2 text-sm font-medium hover:text-foreground transition-colors"
+          className="flex items-center gap-2 text-sm font-medium hover:text-foreground transition-colors cursor-pointer"
           onClick={() => setRevisionsOpen((v) => !v)}
         >
           {revisionsOpen
@@ -1333,7 +1333,7 @@ function RunsTab({
         <div className="space-y-3 min-w-0 overflow-x-hidden">
           <Link
             to={`/agents/${agentRouteId}/runs`}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors no-underline cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to runs
@@ -1813,7 +1813,7 @@ function RunDetail({ run, agentRouteId, adapterType }: { run: HeartbeatRun; agen
                   <div className="pt-1">
                     <button
                       type="button"
-                      className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-60"
+                      className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-60 cursor-pointer"
                       disabled={clearSessionsForTouchedIssues.isPending}
                       onClick={() => {
                         const issueCount = touchedIssueIds.length;
@@ -1852,7 +1852,7 @@ function RunDetail({ run, agentRouteId, adapterType }: { run: HeartbeatRun; agen
               <Link
                 key={issue.issueId}
                 to={`/issues/${issue.identifier ?? issue.issueId}`}
-                className="flex items-center justify-between w-full px-3 py-2 text-xs hover:bg-accent/20 transition-colors text-left no-underline text-inherit"
+                className="flex items-center justify-between w-full px-3 py-2 text-xs hover:bg-accent/20 transition-colors text-left no-underline text-inherit cursor-pointer"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <StatusBadge status={issue.status} />

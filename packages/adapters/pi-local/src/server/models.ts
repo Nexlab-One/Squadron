@@ -64,10 +64,11 @@ function sortModels(models: AdapterModel[]): AdapterModel[] {
 }
 
 function resolvePiCommand(input: unknown): string {
+  const envVal =
+    process.env.SQUADRON_PI_COMMAND ?? process.env.PAPERCLIP_PI_COMMAND;
   const envOverride =
-    typeof process.env.PAPERCLIP_PI_COMMAND === "string" &&
-    process.env.PAPERCLIP_PI_COMMAND.trim().length > 0
-      ? process.env.PAPERCLIP_PI_COMMAND.trim()
+    typeof envVal === "string" && envVal.trim().length > 0
+      ? envVal.trim()
       : "pi";
   return asString(input, envOverride);
 }

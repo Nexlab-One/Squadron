@@ -14,7 +14,8 @@ import { logActivity, secretService } from "../services/index.js";
 export function secretRoutes(db: Db) {
   const router = Router();
   const svc = secretService(db);
-  const configuredDefaultProvider = process.env.PAPERCLIP_SECRETS_PROVIDER;
+  const configuredDefaultProvider =
+    process.env.SQUADRON_SECRETS_PROVIDER ?? process.env.PAPERCLIP_SECRETS_PROVIDER;
   const defaultProvider = (
     configuredDefaultProvider && SECRET_PROVIDERS.includes(configuredDefaultProvider as SecretProvider)
       ? configuredDefaultProvider

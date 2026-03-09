@@ -3,7 +3,7 @@
  * Env: SQUADRON_RELEASES_REPO (owner/repo), SQUADRON_UPDATE_CHECK_DISABLED=1 to disable.
  */
 
-const DEFAULT_REPO = "paperclipai/paperclip";
+const DEFAULT_REPO = "Nexlab-One/Squadron";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const GITHUB_FETCH_TIMEOUT_MS = 10_000;
 

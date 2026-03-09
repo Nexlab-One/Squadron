@@ -433,7 +433,9 @@ async function readAgentInstructions(agent: AgentLike): Promise<{ body: string; 
   const config = agent.adapterConfig as Record<string, unknown>;
   const instructionsFilePath = asString(config.instructionsFilePath);
   if (instructionsFilePath) {
-    const workspaceCwd = asString(process.env.PAPERCLIP_WORKSPACE_CWD);
+    const workspaceCwd = asString(
+      process.env.SQUADRON_WORKSPACE_CWD ?? process.env.PAPERCLIP_WORKSPACE_CWD,
+    );
     const candidates = new Set<string>();
     if (path.isAbsolute(instructionsFilePath)) {
       candidates.add(instructionsFilePath);

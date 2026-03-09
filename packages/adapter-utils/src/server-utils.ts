@@ -103,6 +103,11 @@ export function redactEnvForLogs(env: Record<string, string>): Record<string, st
   return redacted;
 }
 
+/** Prefer SQUADRON_* env vars; fall back to PAPERCLIP_* for backward compatibility. */
+function squadronEnv(key: string): string | undefined {
+  return process.env[`SQUADRON_${key}`] ?? process.env[`PAPERCLIP_${key}`];
+}
+
 export function buildPaperclipEnv(agent: { id: string; companyId: string }): Record<string, string> {
   const resolveHostForUrl = (rawHost: string): string => {
     const host = rawHost.trim();
@@ -110,17 +115,19 @@ export function buildPaperclipEnv(agent: { id: string; companyId: string }): Rec
     if (host.includes(":") && !host.startsWith("[") && !host.endsWith("]")) return `[${host}]`;
     return host;
   };
-  const vars: Record<string, string> = {
+  const runtimeHost = resolveHostForUrl(
+    squadronEnv("LISTEN_HOST") ?? process.env.HOST ?? "localhost",
+  );
+  const runtimePort = squadronEnv("LISTEN_PORT") ?? process.env.PORT ?? "3100";
+  const apiUrl = squadronEnv("API_URL") ?? `http://${runtimeHost}:${runtimePort}`;
+  return {
+    SQUADRON_AGENT_ID: agent.id,
+    SQUADRON_COMPANY_ID: agent.companyId,
+    SQUADRON_API_URL: apiUrl,
     PAPERCLIP_AGENT_ID: agent.id,
     PAPERCLIP_COMPANY_ID: agent.companyId,
+    PAPERCLIP_API_URL: apiUrl,
   };
-  const runtimeHost = resolveHostForUrl(
-    process.env.PAPERCLIP_LISTEN_HOST ?? process.env.HOST ?? "localhost",
-  );
-  const runtimePort = process.env.PAPERCLIP_LISTEN_PORT ?? process.env.PORT ?? "3100";
-  const apiUrl = process.env.PAPERCLIP_API_URL ?? `http://${runtimeHost}:${runtimePort}`;
-  vars.PAPERCLIP_API_URL = apiUrl;
-  return vars;
 }
 
 export function defaultPathForPlatform() {

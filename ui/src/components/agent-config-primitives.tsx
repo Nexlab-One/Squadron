@@ -68,7 +68,11 @@ export function HintIcon({ text }: { text: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button type="button" className="inline-flex text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+        <button
+          type="button"
+          aria-label="More information"
+          className="cursor-pointer inline-flex text-muted-foreground/50 hover:text-muted-foreground transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
           <HelpCircle className="h-3 w-3" />
         </button>
       </TooltipTrigger>
@@ -109,8 +113,12 @@ export function ToggleField({
         {hint && <HintIcon text={hint} />}
       </div>
       <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
         className={cn(
-          "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+          "cursor-pointer relative inline-flex h-5 w-9 items-center rounded-full transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
           checked ? "bg-green-600" : "bg-muted"
         )}
         onClick={() => onChange(!checked)}
@@ -157,8 +165,12 @@ export function ToggleWithNumber({
           {hint && <HintIcon text={hint} />}
         </div>
         <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          aria-label={label}
           className={cn(
-            "relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0",
+            "cursor-pointer relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
             checked ? "bg-green-600" : "bg-muted"
           )}
           onClick={() => onCheckedChange(!checked)}
@@ -206,7 +218,7 @@ export function CollapsibleSection({
   return (
     <div className={cn(bordered && "border-t border-border")}>
       <button
-        className="flex items-center gap-2 w-full px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-accent/30 transition-colors"
+        className="flex items-center gap-2 w-full px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-accent/30 transition-colors cursor-pointer"
         onClick={onToggle}
       >
         {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -390,7 +402,7 @@ export function ChoosePathButton() {
     <>
       <button
         type="button"
-        className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors shrink-0"
+        className="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent/50 transition-colors shrink-0 cursor-pointer"
         onClick={() => setOpen(true)}
       >
         Choose

@@ -21,16 +21,17 @@ function expandHomePrefix(value: string): string {
   return value;
 }
 
+/** Squadron default data dir is ~/.squadron; PAPERCLIP_HOME is supported for backward compatibility. */
 function resolvePaperclipHomeDir(): string {
-  const envHome = process.env.PAPERCLIP_HOME?.trim();
+  const envHome = process.env.SQUADRON_HOME?.trim() || process.env.PAPERCLIP_HOME?.trim();
   if (envHome) return path.resolve(expandHomePrefix(envHome));
-  return path.resolve(os.homedir(), ".paperclip");
+  return path.resolve(os.homedir(), ".squadron");
 }
 
 function resolvePaperclipInstanceId(): string {
-  const raw = process.env.PAPERCLIP_INSTANCE_ID?.trim() || "default";
+  const raw = process.env.SQUADRON_INSTANCE_ID?.trim() || process.env.PAPERCLIP_INSTANCE_ID?.trim() || "default";
   if (!/^[a-zA-Z0-9_-]+$/.test(raw)) {
-    throw new Error(`Invalid PAPERCLIP_INSTANCE_ID '${raw}'.`);
+    throw new Error(`Invalid SQUADRON_INSTANCE_ID / PAPERCLIP_INSTANCE_ID '${raw}'.`);
   }
   return raw;
 }
