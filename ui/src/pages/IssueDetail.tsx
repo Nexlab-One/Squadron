@@ -19,6 +19,7 @@ import { CommentThread } from "../components/CommentThread";
 import { IssueProperties } from "../components/IssueProperties";
 import { LiveRunWidget } from "../components/LiveRunWidget";
 import type { MentionOption } from "../components/MarkdownEditor";
+import { ScrollToBottom } from "../components/ScrollToBottom";
 import { StatusIcon } from "../components/StatusIcon";
 import { PriorityIcon } from "../components/PriorityIcon";
 import { StatusBadge } from "../components/StatusBadge";
@@ -992,6 +993,7 @@ export function IssueDetail() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      <ScrollToBottom />
     </div>
   );
 }
