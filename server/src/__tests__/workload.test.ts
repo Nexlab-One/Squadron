@@ -98,7 +98,7 @@ const pauseWorkload = {
   },
   recommendation: {
     action: "pause" as const,
-    reason: "System unavailable — hold all submissions until capacity returns",
+    reason: "No agents available — hold all submissions until agents are online again",
     details: ["No agents online"],
     submit_ok: false,
     suggested_delay_ms: 30000,

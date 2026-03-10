@@ -12,6 +12,14 @@ import { typeLabel, typeIcon, defaultTypeIcon, ApprovalPayloadRenderer } from ".
 import { PageSkeleton } from "../components/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CheckCircle2, ChevronRight, Sparkles } from "lucide-react";
 import type { ApprovalComment } from "@paperclipai/shared";
 import { MarkdownBody } from "../components/MarkdownBody";
@@ -26,6 +34,7 @@ export function ApprovalDetail() {
   const [commentBody, setCommentBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showRawPayload, setShowRawPayload] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const { data: approval, isLoading } = useQuery({
     queryKey: queryKeys.approvals.detail(approvalId!),
@@ -301,18 +310,42 @@ export function ApprovalDetail() {
             </Button>
           )}
           {approval.status === "rejected" && approval.type === "hire_agent" && linkedAgentId && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive border-destructive/40"
-              onClick={() => {
-                if (!window.confirm("Delete this disapproved agent? This cannot be undone.")) return;
-                deleteAgentMutation.mutate(linkedAgentId);
-              }}
-              disabled={deleteAgentMutation.isPending}
-            >
-              Delete disapproved agent
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive border-destructive/40"
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={deleteAgentMutation.isPending}
+              >
+                Delete disapproved agent
+              </Button>
+              <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <DialogContent showCloseButton={true}>
+                  <DialogHeader>
+                    <DialogTitle>Delete disapproved agent?</DialogTitle>
+                    <DialogDescription>
+                      This will permanently remove the agent. This cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setDeleteConfirmOpen(false);
+                        deleteAgentMutation.mutate(linkedAgentId);
+                      }}
+                      disabled={deleteAgentMutation.isPending}
+                    >
+                      {deleteAgentMutation.isPending ? "Deleting…" : "Delete"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
           )}
         </div>
       </div>

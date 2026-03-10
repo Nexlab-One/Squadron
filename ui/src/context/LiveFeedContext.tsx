@@ -190,7 +190,8 @@ export function LiveFeedProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => {
     setItems([]);
     seenKeysRef.current = new Set();
-    setHydratedForCompanyId(null);
+    // Do not set hydratedForCompanyId to null: LiveFeedStrip would immediately
+    // re-hydrate from the activity API and repopulate the feed.
   }, []);
 
   const hydrate = useCallback(async (companyId: string) => {

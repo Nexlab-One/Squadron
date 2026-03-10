@@ -125,7 +125,7 @@ function computeRecommendation(
     throttle:
       "System under load — reduce submission rate and defer non-critical work",
     shed: "System overloaded — submit only critical/high-priority work, defer everything else",
-    pause: "System unavailable — hold all submissions until capacity returns",
+    pause: "No agents available — hold all submissions until agents are online again",
   };
 
   return {

@@ -36,9 +36,13 @@ import {
   XCircle,
   X,
   RotateCcw,
+  ShieldCheck,
+  UserPlus,
+  CircleDot,
 } from "lucide-react";
 import { Identity } from "../components/Identity";
 import { PageTabBar } from "../components/PageTabBar";
+import { SectionHeader } from "../components/SectionHeader";
 import type { HeartbeatRun, Issue, JoinRequest } from "@paperclipai/shared";
 
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -309,6 +313,7 @@ export function Inbox() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [failedApprovalId, setFailedApprovalId] = useState<string | null>(null);
   const [allCategoryFilter, setAllCategoryFilter] = useState<InboxCategoryFilter>("everything");
   const [allApprovalFilter, setAllApprovalFilter] = useState<InboxApprovalFilter>("all");
   const { dismissed, dismiss } = useDismissedItems();
@@ -451,11 +456,13 @@ export function Inbox() {
     mutationFn: (id: string) => approvalsApi.approve(id),
     onSuccess: (_approval, id) => {
       setActionError(null);
+      setFailedApprovalId(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId!) });
       navigate(`/approvals/${id}?resolved=approved`);
     },
-    onError: (err) => {
+    onError: (err, id) => {
       setActionError(err instanceof Error ? err.message : "Failed to approve");
+      setFailedApprovalId(id);
     },
   });
 
@@ -463,10 +470,12 @@ export function Inbox() {
     mutationFn: (id: string) => approvalsApi.reject(id),
     onSuccess: () => {
       setActionError(null);
+      setFailedApprovalId(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId!) });
     },
-    onError: (err) => {
+    onError: (err, id) => {
       setActionError(err instanceof Error ? err.message : "Failed to reject");
+      setFailedApprovalId(id);
     },
   });
 
@@ -568,14 +577,25 @@ export function Inbox() {
   const showAlertsSection = tab === "new" ? hasAlerts : showAlertsCategory && hasAlerts;
   const showStaleSection = tab === "new" ? hasStale : showStaleCategory && hasStale;
 
-  const visibleSections = [
-    showFailedRunsSection ? "failed_runs" : null,
-    showAlertsSection ? "alerts" : null,
-    showStaleSection ? "stale_work" : null,
-    showApprovalsSection ? "approvals" : null,
-    showJoinRequestsSection ? "join_requests" : null,
-    showTouchedSection ? "issues_i_touched" : null,
-  ].filter((key): key is SectionKey => key !== null);
+  const visibleSections = (
+    showApprovalsSection && tab === "new" && actionableApprovals.length > 0
+      ? [
+          "approvals",
+          showFailedRunsSection ? "failed_runs" : null,
+          showAlertsSection ? "alerts" : null,
+          showStaleSection ? "stale_work" : null,
+          showJoinRequestsSection ? "join_requests" : null,
+          showTouchedSection ? "issues_i_touched" : null,
+        ]
+      : [
+          showFailedRunsSection ? "failed_runs" : null,
+          showAlertsSection ? "alerts" : null,
+          showStaleSection ? "stale_work" : null,
+          showApprovalsSection ? "approvals" : null,
+          showJoinRequestsSection ? "join_requests" : null,
+          showTouchedSection ? "issues_i_touched" : null,
+        ]
+  ).filter((key): key is SectionKey => key !== null);
 
   const allLoaded =
     !isJoinRequestsLoading &&
@@ -651,7 +671,7 @@ export function Inbox() {
       </div>
 
       {approvalsError && <p className="text-sm text-destructive">{approvalsError.message}</p>}
-      {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+      {actionError && !failedApprovalId && <p className="text-sm text-destructive">{actionError}</p>}
 
       {!allLoaded && visibleSections.length === 0 && (
         <PageSkeleton variant="inbox" />
@@ -672,10 +692,20 @@ export function Inbox() {
         <>
           {showSeparatorBefore("approvals") && <Separator />}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {tab === "new" ? "Approvals Needing Action" : "Approvals"}
-            </h3>
-            <div className="grid gap-3">
+            <SectionHeader
+              icon={<ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title={tab === "new" ? "Approvals Needing Action" : "Approvals"}
+              count={approvalsToRender.length}
+              trailing={
+                <Link
+                  to="/approvals"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  View all
+                </Link>
+              }
+            />
+            <div className="grid gap-3 rounded-b-md border border-border border-t-0 p-3">
               {approvalsToRender.map((approval) => (
                 <ApprovalCard
                   key={approval.id}
@@ -689,6 +719,8 @@ export function Inbox() {
                   onReject={() => rejectMutation.mutate(approval.id)}
                   detailLink={`/approvals/${approval.id}`}
                   isPending={approveMutation.isPending || rejectMutation.isPending}
+                  variant="compact"
+                  errorMessage={failedApprovalId === approval.id ? actionError : undefined}
                 />
               ))}
             </div>
@@ -700,10 +732,12 @@ export function Inbox() {
         <>
           {showSeparatorBefore("join_requests") && <Separator />}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Join Requests
-            </h3>
-            <div className="grid gap-3">
+            <SectionHeader
+              icon={<UserPlus className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="Join Requests"
+              count={joinRequests.length}
+            />
+            <div className="grid gap-3 rounded-b-md border border-border border-t-0 p-3">
               {joinRequests.map((joinRequest) => (
                 <div key={joinRequest.id} className="rounded-xl border border-border bg-card p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -754,10 +788,12 @@ export function Inbox() {
         <>
           {showSeparatorBefore("failed_runs") && <Separator />}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Failed Runs
-            </h3>
-            <div className="grid gap-3">
+            <SectionHeader
+              icon={<XCircle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="Failed Runs"
+              count={failedRuns.length}
+            />
+            <div className="grid gap-3 rounded-b-md border border-border border-t-0 p-3">
               {failedRuns.map((run) => (
                 <FailedRunCard
                   key={run.id}
@@ -776,10 +812,12 @@ export function Inbox() {
         <>
           {showSeparatorBefore("alerts") && <Separator />}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Alerts
-            </h3>
-            <div className="divide-y divide-border border border-border">
+            <SectionHeader
+              icon={<AlertTriangle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="Alerts"
+              count={(showAggregateAgentError ? 1 : 0) + (showBudgetAlert ? 1 : 0)}
+            />
+            <div className="divide-y divide-border border border-border rounded-b-md border-t-0">
               {showAggregateAgentError && (
                 <div className="group/alert relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
                   <Link
@@ -834,10 +872,12 @@ export function Inbox() {
         <>
           {showSeparatorBefore("stale_work") && <Separator />}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Stale Work
-            </h3>
-            <div className="divide-y divide-border border border-border">
+            <SectionHeader
+              icon={<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="Stale Work"
+              count={staleIssues.length}
+            />
+            <div className="divide-y divide-border border border-border rounded-b-md border-t-0">
               {staleIssues.map((issue) => (
                 <div
                   key={issue.id}
@@ -894,10 +934,12 @@ export function Inbox() {
         <>
           {showSeparatorBefore("issues_i_touched") && <Separator />}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              My Recent Issues
-            </h3>
-            <div className="divide-y divide-border border border-border">
+            <SectionHeader
+              icon={<CircleDot className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="My Recent Issues"
+              count={touchedIssues.length}
+            />
+            <div className="divide-y divide-border border border-border rounded-b-md border-t-0">
               {touchedIssues.map((issue) => {
                 const isUnread = issue.isUnreadForMe && !fadingOutIssues.has(issue.id);
                 const isFading = fadingOutIssues.has(issue.id);

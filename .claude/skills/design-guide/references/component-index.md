@@ -106,6 +106,23 @@ Supports: critical, high, medium, low. Use alongside StatusIcon in entity row le
 
 Wrap multiple EntityRows in a `border border-border rounded-md` container.
 
+### SectionHeader
+
+**File:** `SectionHeader.tsx`
+**Props:** `icon: ReactNode`, `title: string`, `count?: number`, `trailing?: ReactNode`, `className?`
+**Usage:** Grouped-list style section header (icon, title, optional count, optional trailing link). Used on Inbox and other list views.
+
+```tsx
+<SectionHeader
+  icon={<ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />}
+  title="Approvals Needing Action"
+  count={3}
+  trailing={<Link to="/approvals">View all</Link>}
+/>
+```
+
+Pair with a content div using `rounded-b-md border border-border border-t-0` so the header and content form one bordered block.
+
 ### MetricCard
 
 **File:** `MetricCard.tsx`

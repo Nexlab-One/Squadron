@@ -43,10 +43,25 @@ export function WorkloadWidget({ companyId }: WorkloadWidgetProps) {
 
   if (!data?.recommendation) return null;
 
-  const { action, reason, suggested_delay_ms } = data.recommendation;
+  const { action, reason, details, suggested_delay_ms } = data.recommendation;
   const isNormal = action === "normal";
   const isThrottle = action === "throttle";
   const isShedOrPause = action === "shed" || action === "pause";
+
+  // Use specific detail when it explains the cause (e.g. "No agents online" / "No agents registered")
+  const message =
+    details?.length > 0 && (action === "pause" || action === "shed" || action === "throttle")
+      ? action === "pause"
+        ? `${details[0]}. Hold all submissions until agents are back.`
+        : details[0]
+      : reason;
+
+  const delayLabel =
+    suggested_delay_ms > 0
+      ? action === "pause"
+        ? `Wait at least ${formatDelay(suggested_delay_ms)} before retrying`
+        : `Suggested delay: ${formatDelay(suggested_delay_ms)}`
+      : null;
 
   const containerClass = cn(
     "flex flex-wrap items-center gap-2 rounded-lg border px-4 py-2 text-sm",
@@ -60,11 +75,11 @@ export function WorkloadWidget({ companyId }: WorkloadWidgetProps) {
       <Gauge className="h-4 w-4 shrink-0 opacity-70" />
       <span className="font-medium">{titleCase(action)}</span>
       <span className="opacity-90">—</span>
-      <span>{reason}</span>
-      {suggested_delay_ms > 0 && (
+      <span>{message}</span>
+      {delayLabel && (
         <>
           <span className="opacity-70">·</span>
-          <span>Suggested delay: {formatDelay(suggested_delay_ms)}</span>
+          <span>{delayLabel}</span>
         </>
       )}
     </div>

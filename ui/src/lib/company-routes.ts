@@ -1,3 +1,4 @@
+/** First path segment of every route under :companyPrefix in App.tsx boardRoutes(). Keep in sync when adding board routes. */
 const BOARD_ROUTE_ROOTS = new Set([
   "dashboard",
   "companies",
@@ -9,6 +10,7 @@ const BOARD_ROUTE_ROOTS = new Set([
   "goals",
   "approvals",
   "costs",
+  "standup",
   "activity",
   "inbox",
   "design-guide",

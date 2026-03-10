@@ -16,6 +16,7 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   Target,
   Trash2,
   Upload,
@@ -123,6 +124,7 @@ import { FilterBar, type FilterValue } from "@/components/FilterBar";
 import { InlineEditor } from "@/components/InlineEditor";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import { Identity } from "@/components/Identity";
+import { SectionHeader } from "@/components/SectionHeader";
 
 /* ------------------------------------------------------------------ */
 /*  Section wrapper                                                    */
@@ -1134,6 +1136,41 @@ export function DesignGuide() {
               <Target className="h-3.5 w-3.5 inline mr-1" />
               Org
             </button>
+          </div>
+        </SubSection>
+      </Section>
+
+      {/* ============================================================ */}
+      {/*  SECTION HEADER (Inbox / grouped list)                        */}
+      {/* ============================================================ */}
+      <Section title="SectionHeader">
+        <SubSection title="With count and trailing link">
+          <div>
+            <SectionHeader
+              icon={<ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="Approvals Needing Action"
+              count={3}
+              trailing={
+                <a href="#section-header" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  View all
+                </a>
+              }
+            />
+            <div className="border border-border border-t-0 rounded-b-md p-3">
+              <p className="text-sm text-muted-foreground">Section content below.</p>
+            </div>
+          </div>
+        </SubSection>
+        <SubSection title="With count only">
+          <div>
+            <SectionHeader
+              icon={<CircleDot className="h-4 w-4 shrink-0 text-muted-foreground" />}
+              title="My Recent Issues"
+              count={12}
+            />
+            <div className="border border-border border-t-0 rounded-b-md p-3">
+              <p className="text-sm text-muted-foreground">Section content below.</p>
+            </div>
           </div>
         </SubSection>
       </Section>
