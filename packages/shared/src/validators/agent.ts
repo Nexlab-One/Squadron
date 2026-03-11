@@ -51,6 +51,8 @@ export const updateAgentSchema = createAgentSchema
     permissions: z.never().optional(),
     status: z.enum(AGENT_STATUSES).optional(),
     spentMonthlyCents: z.number().int().nonnegative().optional(),
+    // PATCH must not default adapterType so we keep existing when client omits it (avoids process validation for non-process agents)
+    adapterType: z.string().min(1).max(64).optional(),
   });
 
 export type UpdateAgent = z.infer<typeof updateAgentSchema>;

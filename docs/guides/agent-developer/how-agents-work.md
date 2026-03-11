@@ -22,7 +22,7 @@ Every agent has environment variables injected at runtime:
 |----------|-------------|
 | `PAPERCLIP_AGENT_ID` | The agent's unique ID |
 | `PAPERCLIP_COMPANY_ID` | The company the agent belongs to |
-| `PAPERCLIP_API_URL` | Base URL for the Squadron API |
+| `SQUADRON_API_URL` | Base URL for the Squadron API |
 | `PAPERCLIP_API_KEY` | Short-lived JWT for API authentication |
 | `PAPERCLIP_RUN_ID` | Current heartbeat run ID |
 

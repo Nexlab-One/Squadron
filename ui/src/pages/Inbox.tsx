@@ -217,7 +217,7 @@ function FailedRunCard({
   });
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-red-500/30 bg-gradient-to-br from-red-500/10 via-card to-card p-4">
+    <div className="group relative overflow-hidden rounded-xl border border-red-500/30 bg-linear-to-br from-red-500/10 via-card to-card p-4">
       <div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-red-500/10 blur-2xl" />
       <button
         type="button"
@@ -453,16 +453,22 @@ export function Inbox() {
   };
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => approvalsApi.approve(id),
-    onSuccess: (_approval, id) => {
+    mutationFn: (arg: { id: string; payload?: unknown }) => approvalsApi.approve(arg.id),
+    onSuccess: (_approval, arg) => {
       setActionError(null);
       setFailedApprovalId(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.approvals.list(selectedCompanyId!) });
-      navigate(`/approvals/${id}?resolved=approved`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.agents.list(selectedCompanyId!) });
+      const payload = arg?.payload as Record<string, unknown> | undefined;
+      const agentId = typeof payload?.agentId === "string" ? payload.agentId : null;
+      if (agentId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.agents.detail(agentId) });
+      }
+      navigate(`/approvals/${arg.id}?resolved=approved`);
     },
-    onError: (err, id) => {
+    onError: (err, arg) => {
       setActionError(err instanceof Error ? err.message : "Failed to approve");
-      setFailedApprovalId(id);
+      setFailedApprovalId(arg?.id ?? null);
     },
   });
 
@@ -715,7 +721,7 @@ export function Inbox() {
                       ? (agents ?? []).find((a) => a.id === approval.requestedByAgentId) ?? null
                       : null
                   }
-                  onApprove={() => approveMutation.mutate(approval.id)}
+                  onApprove={() => approveMutation.mutate({ id: approval.id, payload: approval.payload })}
                   onReject={() => rejectMutation.mutate(approval.id)}
                   detailLink={`/approvals/${approval.id}`}
                   isPending={approveMutation.isPending || rejectMutation.isPending}

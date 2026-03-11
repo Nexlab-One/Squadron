@@ -80,7 +80,7 @@ Return structured diagnostics:
 
 ## Step 5: CLI Module
 
-`format-event.ts` — pretty-prints stdout for `paperclipai run --watch` using `picocolors`.
+`format-event.ts` — pretty-prints stdout for `squadron run --watch` using `picocolors`.
 
 ## Step 6: Register
 

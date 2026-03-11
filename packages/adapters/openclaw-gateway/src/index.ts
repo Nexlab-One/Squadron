@@ -8,12 +8,12 @@ export const agentConfigurationDoc = `# openclaw_gateway agent configuration
 Adapter: openclaw_gateway
 
 Use when:
-- You want Paperclip to invoke OpenClaw over the Gateway WebSocket protocol.
+- You want Squadron to invoke OpenClaw over the Gateway WebSocket protocol.
 - You want native gateway auth/connect semantics instead of HTTP /v1/responses or /hooks/*.
 
 Don't use when:
 - You only expose OpenClaw HTTP endpoints.
-- Your deployment does not permit outbound WebSocket access from the Paperclip server.
+- Your deployment does not permit outbound WebSocket access from the Squadron server.
 
 Core fields:
 - url (string, required): OpenClaw gateway WebSocket URL (ws:// or wss://)
@@ -34,9 +34,15 @@ Request behavior fields:
 - timeoutSec (number, optional): adapter timeout in seconds (default 120)
 - waitTimeoutMs (number, optional): agent.wait timeout override (default timeoutSec * 1000)
 - autoPairOnFirstConnect (boolean, optional): on first "pairing required", attempt device.pair.list/device.pair.approve via shared auth, then retry once (default true)
-- paperclipApiUrl (string, optional): absolute Paperclip base URL advertised in wake text
+- squadronApiUrl (string, optional): absolute Squadron base URL advertised in wake text
 
 Session routing fields:
 - sessionKeyStrategy (string, optional): issue (default), fixed, or run
-- sessionKey (string, optional): fixed session key when strategy=fixed (default paperclip)
+- sessionKey (string, optional): fixed session key when strategy=fixed (default squadron)
+
+TLS for wss://:
+- tlsCaPath (string, optional): path to a PEM file or directory of .pem/.crt files containing the CA or server certificate to trust. Use for self-signed or custom CA gateways (e.g. Moltis). Full verification is performed using that trust store.
+- tlsCaPem (string, optional): PEM-encoded CA or server certificate(s) inline. Prefer tlsCaPath when the cert is in a file.
+- allowInsecureTls (boolean, optional): when true, skip certificate verification for wss:// (dev/debug only; not for production). Default false.
+- For local dev only: connections to wss://localhost, wss://127.0.0.1, or wss://::1 automatically accept any certificate when neither tlsCaPath nor tlsCaPem is set.
 `;

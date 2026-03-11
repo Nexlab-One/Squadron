@@ -475,7 +475,7 @@ if [ "$dry_run" = true ]; then
   fi
 elif [ "$canary" = true ]; then
   info "Published canary ${TARGET_PUBLISH_VERSION}."
-  info "Install with: npx paperclipai@canary onboard"
+  info "Install with: npx squadron onboard"
   info "Stable version remains: $CURRENT_STABLE_VERSION"
 else
   info "Published stable v${TARGET_STABLE_VERSION}."

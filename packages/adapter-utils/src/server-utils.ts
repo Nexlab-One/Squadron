@@ -119,14 +119,13 @@ export function buildPaperclipEnv(agent: { id: string; companyId: string }): Rec
     squadronEnv("LISTEN_HOST") ?? process.env.HOST ?? "localhost",
   );
   const runtimePort = squadronEnv("LISTEN_PORT") ?? process.env.PORT ?? "3100";
-  const apiUrl = squadronEnv("API_URL") ?? `http://${runtimeHost}:${runtimePort}`;
+  const apiUrl = process.env.SQUADRON_API_URL ?? `http://${runtimeHost}:${runtimePort}`;
   return {
     SQUADRON_AGENT_ID: agent.id,
     SQUADRON_COMPANY_ID: agent.companyId,
     SQUADRON_API_URL: apiUrl,
     PAPERCLIP_AGENT_ID: agent.id,
     PAPERCLIP_COMPANY_ID: agent.companyId,
-    PAPERCLIP_API_URL: apiUrl,
   };
 }
 

@@ -115,7 +115,6 @@ function buildAgentEnvExports(input: {
     `export SQUADRON_COMPANY_ID='${escaped(input.companyId)}'`,
     `export SQUADRON_AGENT_ID='${escaped(input.agentId)}'`,
     `export SQUADRON_API_KEY='${escaped(input.apiKey)}'`,
-    `export PAPERCLIP_API_URL='${escaped(input.apiBase)}'`,
     `export PAPERCLIP_COMPANY_ID='${escaped(input.companyId)}'`,
     `export PAPERCLIP_AGENT_ID='${escaped(input.agentId)}'`,
     `export PAPERCLIP_API_KEY='${escaped(input.apiKey)}'`,

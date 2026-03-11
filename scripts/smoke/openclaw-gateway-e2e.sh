@@ -25,8 +25,8 @@ require_cmd docker
 require_cmd node
 require_cmd shasum
 
-PAPERCLIP_API_URL="${PAPERCLIP_API_URL:-http://127.0.0.1:3100}"
-API_BASE="${PAPERCLIP_API_URL%/}/api"
+SQUADRON_API_URL="${SQUADRON_API_URL:-http://127.0.0.1:3100}"
+API_BASE="${SQUADRON_API_URL%/}/api"
 
 COMPANY_SELECTOR="${COMPANY_SELECTOR:-CLA}"
 OPENCLAW_AGENT_NAME="${OPENCLAW_AGENT_NAME:-OpenClaw Gateway Smoke Agent}"
@@ -45,7 +45,7 @@ OPENCLAW_BUILD="${OPENCLAW_BUILD:-1}"
 OPENCLAW_WAIT_SECONDS="${OPENCLAW_WAIT_SECONDS:-60}"
 OPENCLAW_RESET_STATE="${OPENCLAW_RESET_STATE:-1}"
 
-PAPERCLIP_API_URL_FOR_OPENCLAW="${PAPERCLIP_API_URL_FOR_OPENCLAW:-http://host.docker.internal:3100}"
+SQUADRON_API_URL_FOR_OPENCLAW="${SQUADRON_API_URL_FOR_OPENCLAW:-http://host.docker.internal:3100}"
 CASE_TIMEOUT_SEC="${CASE_TIMEOUT_SEC:-420}"
 RUN_TIMEOUT_SEC="${RUN_TIMEOUT_SEC:-300}"
 STRICT_CASES="${STRICT_CASES:-1}"
@@ -62,7 +62,7 @@ if [[ -n "${PAPERCLIP_AUTH_HEADER:-}" ]]; then
 fi
 if [[ -n "${PAPERCLIP_COOKIE:-}" ]]; then
   AUTH_HEADERS+=( -H "Cookie: ${PAPERCLIP_COOKIE}" )
-  PAPERCLIP_BROWSER_ORIGIN="${PAPERCLIP_BROWSER_ORIGIN:-${PAPERCLIP_API_URL%/}}"
+  PAPERCLIP_BROWSER_ORIGIN="${PAPERCLIP_BROWSER_ORIGIN:-${SQUADRON_API_URL%/}}"
   AUTH_HEADERS+=( -H "Origin: ${PAPERCLIP_BROWSER_ORIGIN}" -H "Referer: ${PAPERCLIP_BROWSER_ORIGIN}/" )
 fi
 
@@ -91,7 +91,7 @@ api_request() {
   if [[ "$path" == http://* || "$path" == https://* ]]; then
     url="$path"
   elif [[ "$path" == /api/* ]]; then
-    url="${PAPERCLIP_API_URL%/}${path}"
+    url="${SQUADRON_API_URL%/}${path}"
   else
     url="${API_BASE}${path}"
   fi
@@ -406,7 +406,7 @@ create_and_approve_gateway_join() {
     --arg name "$OPENCLAW_AGENT_NAME" \
     --arg url "$OPENCLAW_GATEWAY_URL" \
     --arg token "$gateway_token" \
-    --arg paperclipApiUrl "$PAPERCLIP_API_URL_FOR_OPENCLAW" \
+    --arg squadronApiUrl "$SQUADRON_API_URL_FOR_OPENCLAW" \
     --argjson timeoutSec "$OPENCLAW_ADAPTER_TIMEOUT_SEC" \
     --argjson waitTimeoutMs "$OPENCLAW_ADAPTER_WAIT_TIMEOUT_MS" \
     '{
@@ -423,7 +423,7 @@ create_and_approve_gateway_join() {
         sessionKey: "paperclip",
         timeoutSec: $timeoutSec,
         waitTimeoutMs: $waitTimeoutMs,
-        paperclipApiUrl: $paperclipApiUrl
+        squadronApiUrl: $squadronApiUrl
       }
     }')"
 
@@ -488,7 +488,7 @@ persist_claimed_key_artifacts() {
     api_request "GET" "/skills/paperclip"
     assert_status "200"
     {
-      echo "PAPERCLIP_API_URL=${PAPERCLIP_API_URL_FOR_OPENCLAW}"
+      echo "SQUADRON_API_URL=${SQUADRON_API_URL_FOR_OPENCLAW}"
       echo
       printf "%s\n" "$RESPONSE_BODY"
     } > "${skill_dir}/SKILL.md"
@@ -884,7 +884,7 @@ main() {
   mkdir -p "$OPENCLAW_DIAG_DIR"
   log "diagnostics dir: ${OPENCLAW_DIAG_DIR}"
 
-  wait_http_ready "${PAPERCLIP_API_URL%/}/api/health" 15 || fail "Paperclip API health endpoint not reachable"
+  wait_http_ready "${SQUADRON_API_URL%/}/api/health" 15 || fail "Squadron API health endpoint not reachable"
   api_request "GET" "/health"
   assert_status "200"
   log "paperclip health deploymentMode=$(jq -r '.deploymentMode // "unknown"' <<<"$RESPONSE_BODY") exposure=$(jq -r '.deploymentExposure // "unknown"' <<<"$RESPONSE_BODY")"

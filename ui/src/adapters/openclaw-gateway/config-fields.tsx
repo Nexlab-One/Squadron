@@ -6,6 +6,13 @@ import {
   DraftInput,
   help,
 } from "../../components/agent-config-primitives";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const inputClass =
   "w-full rounded-md border border-border px-2.5 py-1.5 bg-transparent outline-none text-sm font-mono placeholder:text-muted-foreground/40";
@@ -92,9 +99,39 @@ export function OpenClawGatewayConfigFields({
     String(config.sessionKeyStrategy ?? "fixed"),
   );
 
+  const effectiveVariant = isCreate
+    ? (values!.gatewayVariant ?? "") || "openclaw"
+    : (eff("adapterConfig", "gatewayVariant", String(config.gatewayVariant ?? "")) as string) || "openclaw";
+  const isMoltis = effectiveVariant === "moltis";
+
   return (
     <>
-      <Field label="Gateway URL" hint={help.webhookUrl}>
+      <Field label="Gateway variant">
+        <Select
+          value={effectiveVariant}
+          onValueChange={(v) => {
+            const value = v === "moltis" ? "moltis" : undefined;
+            if (isCreate) {
+              set!({ gatewayVariant: value });
+            } else {
+              mark("adapterConfig", "gatewayVariant", value);
+            }
+          }}
+        >
+          <SelectTrigger className="w-full h-9 text-sm font-normal">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="openclaw">OpenClaw</SelectItem>
+            <SelectItem value="moltis">Moltis</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <Field
+        label="Gateway URL"
+        hint={isMoltis ? "e.g. ws://host:port/ws/chat" : help.webhookUrl}
+      >
         <DraftInput
           value={
             isCreate
@@ -108,7 +145,7 @@ export function OpenClawGatewayConfigFields({
           }
           immediate
           className={inputClass}
-          placeholder="ws://127.0.0.1:18789"
+          placeholder={isMoltis ? "ws://127.0.0.1:PORT/ws/chat" : "ws://127.0.0.1:18789"}
         />
       </Field>
 
@@ -119,11 +156,11 @@ export function OpenClawGatewayConfigFields({
               value={
                 eff(
                   "adapterConfig",
-                  "paperclipApiUrl",
-                  String(config.paperclipApiUrl ?? ""),
+                  "squadronApiUrl",
+                  String(config.squadronApiUrl ?? ""),
                 )
               }
-              onCommit={(v) => mark("adapterConfig", "paperclipApiUrl", v || undefined)}
+              onCommit={(v) => mark("adapterConfig", "squadronApiUrl", v || undefined)}
               immediate
               className={inputClass}
               placeholder="https://squadron.example"
@@ -206,8 +243,9 @@ export function OpenClawGatewayConfigFields({
 
           <Field label="Device auth">
             <div className="text-xs text-muted-foreground leading-relaxed">
-              Always enabled for gateway agents. Paperclip persists a device key during onboarding so pairing approvals
-              remain stable across runs.
+              {isMoltis
+                ? "For Moltis, device key is not required."
+                : "Always enabled for gateway agents. Squadron persists a device key during onboarding so pairing approvals remain stable across runs."}
             </div>
           </Field>
         </>

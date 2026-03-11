@@ -72,7 +72,7 @@ const ADVANCED_ADAPTER_OPTIONS: Array<{
     value: "openclaw_gateway",
     label: "OpenClaw Gateway",
     icon: Bot,
-    desc: "Invoke OpenClaw via gateway protocol",
+    desc: "OpenClaw or Moltis via gateway protocol",
   },
 ];
 

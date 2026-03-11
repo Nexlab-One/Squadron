@@ -8,7 +8,7 @@ Get Squadron running locally in under 5 minutes.
 ## Quick Start (Recommended)
 
 ```sh
-npx paperclipai onboard --yes
+npx squadron onboard --yes
 ```
 
 This walks you through setup, configures your environment, and gets Squadron running.
@@ -29,7 +29,7 @@ No external database required — Squadron uses an embedded PostgreSQL instance 
 ## One-Command Bootstrap
 
 ```sh
-pnpm paperclipai run
+pnpm squadron run
 ```
 
 This auto-onboards if config is missing, runs health checks with auto-repair, and starts the server.

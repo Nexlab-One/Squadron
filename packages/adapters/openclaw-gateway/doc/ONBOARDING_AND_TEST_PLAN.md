@@ -39,7 +39,7 @@ This plan is now **gateway-only**. Paperclip supports OpenClaw through `openclaw
 Recommended fields:
 ```json
 {
-  "paperclipApiUrl": "http://host.docker.internal:3100",
+  "squadronApiUrl": "http://host.docker.internal:3100",
   "waitTimeoutMs": 120000,
   "sessionKeyStrategy": "issue",
   "role": "operator",

@@ -4,7 +4,7 @@
   "description": "Squadron CLI — orchestrate AI agent teams to run a business (fork of Paperclip)",
   "type": "module",
   "bin": {
-    "paperclipai": "./dist/index.js"
+    "squadron": "./dist/index.js"
   },
   "keywords": [
     "squadron",

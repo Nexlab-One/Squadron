@@ -6,6 +6,7 @@ import { companiesApi } from "../api/companies";
 import { accessApi } from "../api/access";
 import { queryKeys } from "../lib/queryKeys";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Settings, Check } from "lucide-react";
 import { CompanyPatternIcon } from "../components/CompanyPatternIcon";
 import {
@@ -18,6 +19,7 @@ type AgentSnippetInput = {
   onboardingTextUrl: string;
   connectionCandidates?: string[] | null;
   testResolutionUrl?: string | null;
+  gatewayVariant?: "openclaw" | "moltis";
 };
 
 export function CompanySettings() {
@@ -45,6 +47,8 @@ export function CompanySettings() {
 
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSnippet, setInviteSnippet] = useState<string | null>(null);
+  const [inviteGatewayVariant, setInviteGatewayVariant] = useState<"openclaw" | "moltis">("openclaw");
+  const [lastInviteVariant, setLastInviteVariant] = useState<"openclaw" | "moltis" | null>(null);
   const [snippetCopied, setSnippetCopied] = useState(false);
   const [snippetCopyDelightId, setSnippetCopyDelightId] = useState(0);
 
@@ -86,10 +90,17 @@ export function CompanySettings() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: () =>
-      accessApi.createOpenClawInvitePrompt(selectedCompanyId!),
-    onSuccess: async (invite) => {
+    mutationFn: (opts?: { gatewayVariant?: "openclaw" | "moltis" }) => {
+      const variant = opts?.gatewayVariant ?? inviteGatewayVariant;
+      return accessApi
+        .createOpenClawInvitePrompt(selectedCompanyId!, {
+          gatewayVariant: variant === "moltis" ? "moltis" : undefined,
+        })
+        .then((invite) => ({ invite, variant }));
+    },
+    onSuccess: async ({ invite, variant }) => {
       setInviteError(null);
+      setInviteGatewayVariant(variant);
       const base = window.location.origin.replace(/\/+$/, "");
       const onboardingTextLink =
         invite.onboardingTextUrl ??
@@ -109,16 +120,19 @@ export function CompanySettings() {
             manifest.onboarding.connectivity?.connectionCandidates ?? null,
           testResolutionUrl:
             manifest.onboarding.connectivity?.testResolutionEndpoint?.url ??
-            null
+            null,
+          gatewayVariant: variant
         });
       } catch {
         snippet = buildAgentSnippet({
           onboardingTextUrl: absoluteUrl,
           connectionCandidates: null,
-          testResolutionUrl: null
+          testResolutionUrl: null,
+          gatewayVariant: variant
         });
       }
       setInviteSnippet(snippet);
+      setLastInviteVariant(variant);
       try {
         await navigator.clipboard.writeText(snippet);
         setSnippetCopied(true);
@@ -339,19 +353,51 @@ export function CompanySettings() {
         <div className="space-y-3 rounded-md border border-border px-4 py-4">
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground">
-              Generate an OpenClaw agent invite snippet.
+              Generate a gateway agent invite snippet.
             </span>
-            <HintIcon text="Creates a short-lived OpenClaw agent invite and renders a copy-ready prompt." />
+            <HintIcon text="Creates a short-lived agent invite and renders a copy-ready prompt for OpenClaw or Moltis gateway." />
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-md border border-border p-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setInviteGatewayVariant("openclaw");
+                  inviteMutation.mutate({ gatewayVariant: "openclaw" });
+                }}
+                className={cn(
+                  "cursor-pointer rounded-sm px-2 py-1 text-xs font-medium transition-colors",
+                  inviteGatewayVariant === "openclaw"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                OpenClaw
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setInviteGatewayVariant("moltis");
+                  inviteMutation.mutate({ gatewayVariant: "moltis" });
+                }}
+                className={cn(
+                  "cursor-pointer rounded-sm px-2 py-1 text-xs font-medium transition-colors",
+                  inviteGatewayVariant === "moltis"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Moltis
+              </button>
+            </div>
             <Button
               size="sm"
-              onClick={() => inviteMutation.mutate()}
+              onClick={() => inviteMutation.mutate(undefined)}
               disabled={inviteMutation.isPending}
             >
               {inviteMutation.isPending
                 ? "Generating..."
-                : "Generate OpenClaw Invite Prompt"}
+                : "Generate Invite Prompt"}
             </Button>
           </div>
           {inviteError && (
@@ -361,7 +407,9 @@ export function CompanySettings() {
             <div className="rounded-md border border-border bg-muted/30 p-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs text-muted-foreground">
-                  OpenClaw Invite Prompt
+                  {lastInviteVariant === "moltis"
+                    ? "Moltis Invite Prompt"
+                    : "OpenClaw Invite Prompt"}
                 </div>
                 {snippetCopied && (
                   <span
@@ -473,13 +521,13 @@ function buildAgentSnippet(input: AgentSnippetInput) {
       ? `No candidate URLs are available. Ask your user to configure a reachable hostname in Squadron, then retry.
 Suggested steps:
 - choose a hostname that resolves to the Squadron host from your runtime
-- run: pnpm paperclipai allowed-hostname <host>
+- from the Squadron repo root, run: pnpm squadron allowed-hostname <host>
 - restart Squadron
 - verify with: curl -fsS http://<host>:3100/api/health
 - regenerate this invite snippet`
       : `If none are reachable, ask your user to add a reachable hostname in Squadron, restart, and retry.
-Suggested command:
-- pnpm paperclipai allowed-hostname <host>
+Suggested command (from Squadron repo root):
+- pnpm squadron allowed-hostname <host>
 Then verify with: curl -fsS <base-url>/api/health`;
 
   const resolutionLine = resolutionTestUrl
@@ -501,8 +549,14 @@ For your "agentName", just use your own agent name (OpenClaw or whatever your na
 You also need to send a gateway URL that Squadron can access. Check your config and include that URL.${resolutionLine}
 
 ---
+${input.gatewayVariant === "moltis" ? `This invite is for Moltis gateway. When you submit the join request, use:
+- \`adapterType: "openclaw_gateway"\` with \`gatewayVariant: "moltis"\` in your config
+- \`agentDefaultsPayload.url\` as your Moltis gateway WebSocket URL (e.g. \`ws://host:port/ws/chat\`)
+- \`agentDefaultsPayload.headers["x-openclaw-token"]\` with your gateway token
+- Device key is not required for Moltis; you can omit \`devicePrivateKeyPem\` and use \`disableDeviceAuth: true\` if needed.
+See MOLTIS_ONBOARDING in the Squadron repo for full steps.
 
-This onboarding flow is for OpenClaw Gateway.
+` : `This onboarding flow is for OpenClaw Gateway.
 When you submit the join request, use:
 - \`adapterType: "openclaw_gateway"\`
 - \`agentDefaultsPayload.url\` as your \`ws://\` or \`wss://\` gateway URL
@@ -511,7 +565,7 @@ When you submit the join request, use:
 - Keep device auth enabled (recommended). If \`devicePrivateKeyPem\` is omitted, Squadron will generate and persist one during join so pairing approvals remain stable.
 - Only use \`disableDeviceAuth=true\` for special environments where pairing cannot be completed.
 
-Do NOT use \`/v1/responses\` or \`/hooks/*\` in this join flow.
+`}Do NOT use \`/v1/responses\` or \`/hooks/*\` in this join flow.
 
 Before you do anything, please respond to your user that you understand the instructions and you're going to work on them. Then do the step above in another session called "squadron-onboarding" and then tell your user when you're done. Update your user in intermediate steps along the way so they know what's going on.
 

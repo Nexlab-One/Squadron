@@ -587,10 +587,10 @@ The Company Store is a registry for discovering and installing modules and templ
 ### CLI Commands
 
 ```bash
-pnpm paperclipai store list                    # browse available modules and templates
-pnpm paperclipai store install <module-id>     # install a module
-pnpm paperclipai store import <template-id>    # import a company template
-pnpm paperclipai store export                  # export current company as template
+pnpm squadron store list                    # browse available modules and templates
+pnpm squadron store install <module-id>     # install a module
+pnpm squadron store import <template-id>    # import a company template
+pnpm squadron store export                  # export current company as template
 ```
 
 ---

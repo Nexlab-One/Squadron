@@ -215,6 +215,7 @@ export interface CreateConfigValues {
   envVars: string;
   envBindings: Record<string, unknown>;
   url: string;
+  gatewayVariant?: string;
   bootstrapPrompt: string;
   maxTurnsPerRun: number;
   heartbeatEnabled: boolean;

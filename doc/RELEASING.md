@@ -46,7 +46,7 @@ claude --print --output-format stream-json --verbose --dangerously-skip-permissi
 PAPERCLIPAI_VERSION=canary ./scripts/docker-onboard-smoke.sh
 
 # Users install with:
-npx paperclipai@canary onboard
+npx squadron onboard
 ```
 
 Result:
@@ -124,7 +124,7 @@ This is the best existing fit when you want:
 
 - a standalone Paperclip data dir
 - a dedicated host port
-- an end-to-end `npx paperclipai ... onboard` check
+- an end-to-end `npx squadron ... onboard` check
 
 In authenticated/private mode, the expected result is a full authenticated onboarding flow, including printing the bootstrap CEO invite once startup completes.
 
@@ -180,7 +180,7 @@ The workflow:
 ### Before a canary
 
 - [ ] You are intentionally testing something that should be installable before it becomes default
-- [ ] You are comfortable with users installing it via `npx paperclipai@canary onboard`
+- [ ] You are comfortable with users installing it via `npx squadron onboard`
 - [ ] You understand that each canary is a new immutable npm version such as `1.2.3-canary.1`
 
 ### Before a stable
@@ -370,7 +370,7 @@ If you want to smoke onboarding from the current codebase rather than npm, run:
 
 Minimum checks:
 
-- [ ] `npx paperclipai@canary onboard` installs
+- [ ] `npx squadron onboard` installs
 - [ ] onboarding completes without crashes
 - [ ] the server boots
 - [ ] the UI loads
@@ -503,7 +503,7 @@ The default rollback strategy is **dist-tag rollback, then fix forward**.
 Why:
 
 - npm versions are immutable
-- users need `npx paperclipai onboard` to recover quickly
+- users need `npx squadron onboard` to recover quickly
 - moving `latest` back is faster and safer than trying to delete history
 
 Rollback procedure:

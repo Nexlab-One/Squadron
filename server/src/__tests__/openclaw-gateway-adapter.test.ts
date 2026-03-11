@@ -167,6 +167,132 @@ async function createMockGatewayServer() {
   };
 }
 
+/** Moltis-style mock: no connect.challenge; client sends connect first; protocol 4. */
+async function createMockMoltisGatewayServer() {
+  const server = createServer();
+  const wss = new WebSocketServer({ server });
+
+  let agentPayload: Record<string, unknown> | null = null;
+
+  wss.on("connection", (socket) => {
+    // Moltis does NOT send connect.challenge; client will send connect first.
+    socket.on("message", (raw) => {
+      const text = Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw);
+      const frame = JSON.parse(text) as {
+        type: string;
+        id: string;
+        method: string;
+        params?: Record<string, unknown>;
+      };
+
+      if (frame.type !== "req") return;
+
+      if (frame.method === "connect") {
+        const maxProtocol = frame.params?.maxProtocol ?? 0;
+        socket.send(
+          JSON.stringify({
+            type: "res",
+            id: frame.id,
+            ok: true,
+            payload: {
+              type: "hello-ok",
+              protocol: maxProtocol >= 4 ? 4 : 3,
+              server: { version: "moltis-test", connId: "conn-moltis-1" },
+              features: { methods: ["connect", "agent", "agent.wait"], events: ["agent"] },
+              snapshot: { version: 1, ts: Date.now() },
+              policy: { maxPayload: 1_000_000, maxBufferedBytes: 1_000_000, tickIntervalMs: 30_000 },
+            },
+          }),
+        );
+        return;
+      }
+
+      if (frame.method === "agent") {
+        agentPayload = frame.params ?? null;
+        const runId =
+          typeof frame.params?.idempotencyKey === "string"
+            ? frame.params.idempotencyKey
+            : "run-moltis-123";
+
+        socket.send(
+          JSON.stringify({
+            type: "res",
+            id: frame.id,
+            ok: true,
+            payload: {
+              runId,
+              status: "accepted",
+              acceptedAt: Date.now(),
+            },
+          }),
+        );
+
+        socket.send(
+          JSON.stringify({
+            type: "event",
+            event: "agent",
+            payload: {
+              runId,
+              seq: 1,
+              stream: "assistant",
+              ts: Date.now(),
+              data: { delta: "moltis-" },
+            },
+          }),
+        );
+        socket.send(
+          JSON.stringify({
+            type: "event",
+            event: "agent",
+            payload: {
+              runId,
+              seq: 2,
+              stream: "assistant",
+              ts: Date.now(),
+              data: { delta: "ok" },
+            },
+          }),
+        );
+        return;
+      }
+
+      if (frame.method === "agent.wait") {
+        socket.send(
+          JSON.stringify({
+            type: "res",
+            id: frame.id,
+            ok: true,
+            payload: {
+              runId: frame.params?.runId,
+              status: "ok",
+              startedAt: 1,
+              endedAt: 2,
+            },
+          }),
+        );
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to resolve test server address");
+  }
+
+  return {
+    url: `ws://127.0.0.1:${address.port}`,
+    getAgentPayload: () => agentPayload,
+    close: async () => {
+      await new Promise<void>((resolve) => wss.close(() => resolve()));
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    },
+  };
+}
+
 async function createMockGatewayServerWithPairing() {
   const server = createServer();
   const wss = new WebSocketServer({ server });
@@ -430,6 +556,45 @@ describe("openclaw gateway adapter execute", () => {
       expect(String(payload?.message ?? "")).toContain("PAPERCLIP_TASK_ID=task-123");
 
       expect(logs.some((entry) => entry.includes("[openclaw-gateway:event] run=run-123 stream=assistant"))).toBe(true);
+    } finally {
+      await gateway.close();
+    }
+  });
+
+  it("Moltis mode: sends connect first with protocol 4 and does not wait for connect.challenge", async () => {
+    const gateway = await createMockMoltisGatewayServer();
+    const logs: string[] = [];
+
+    try {
+      const result = await execute(
+        buildContext(
+          {
+            url: gateway.url,
+            gatewayVariant: "moltis",
+            headers: {
+              "x-openclaw-token": "gateway-token-moltis",
+            },
+            waitTimeoutMs: 2000,
+          },
+          {
+            onLog: async (_stream, chunk) => {
+              logs.push(chunk);
+            },
+          },
+        ),
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.timedOut).toBe(false);
+      expect(result.summary).toContain("moltis-ok");
+      expect(result.provider).toBe("openclaw");
+
+      expect(logs.some((entry) => entry.includes("Moltis handshake (client-first, protocol 4)"))).toBe(true);
+      expect(logs.some((entry) => entry.includes("connected protocol=4"))).toBe(true);
+
+      const payload = gateway.getAgentPayload();
+      expect(payload).toBeTruthy();
+      expect(payload?.idempotencyKey).toBe("run-123");
     } finally {
       await gateway.close();
     }

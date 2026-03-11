@@ -1,6 +1,9 @@
 import type { AdapterExecutionContext, AdapterExecutionResult } from "@paperclipai/adapter-utils";
 import { asNumber, asString, buildPaperclipEnv, parseObject } from "@paperclipai/adapter-utils/server-utils";
 import crypto, { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import https from "node:https";
+import path from "node:path";
 import { WebSocket } from "ws";
 
 type SessionKeyStrategy = "fixed" | "issue" | "run";
@@ -67,6 +70,7 @@ type GatewayClientOptions = {
   headers: Record<string, string>;
   onEvent: (frame: GatewayEventFrame) => Promise<void> | void;
   onLog: AdapterExecutionContext["onLog"];
+  agent?: import("node:https").Agent;
 };
 
 type GatewayClientRequestOptions = {
@@ -75,10 +79,11 @@ type GatewayClientRequestOptions = {
 };
 
 const PROTOCOL_VERSION = 3;
+const PROTOCOL_VERSION_MOLTIS = 4;
 const DEFAULT_SCOPES = ["operator.admin"];
 const DEFAULT_CLIENT_ID = "gateway-client";
 const DEFAULT_CLIENT_MODE = "backend";
-const DEFAULT_CLIENT_VERSION = "paperclip";
+const DEFAULT_CLIENT_VERSION = "squadron";
 const DEFAULT_ROLE = "operator";
 
 const SENSITIVE_LOG_KEY_PATTERN =
@@ -137,6 +142,87 @@ function resolveSessionKey(input: {
 function isLoopbackHost(hostname: string): boolean {
   const value = hostname.trim().toLowerCase();
   return value === "localhost" || value === "127.0.0.1" || value === "::1";
+}
+
+/** Split PEM string into array of individual certificate PEMs. */
+function parsePemCerts(pem: string): string[] {
+  const trimmed = pem.trim();
+  if (!trimmed) return [];
+  const blocks = trimmed.split(/(?=-----BEGIN CERTIFICATE-----)/);
+  return blocks
+    .map((b) => b.trim())
+    .filter((b) => b.startsWith("-----BEGIN CERTIFICATE-----") && b.includes("-----END CERTIFICATE-----"));
+}
+
+/** Load CA cert(s) from path (file or directory of .pem/.crt files). */
+function loadCaFromPath(fileOrDirPath: string): string[] {
+  const resolved = path.resolve(fileOrDirPath);
+  const stat = fs.statSync(resolved, { throwIfNoEntry: true });
+  if (stat.isFile()) {
+    const content = fs.readFileSync(resolved, "utf8");
+    return parsePemCerts(content);
+  }
+  if (stat.isDirectory()) {
+    const names = fs.readdirSync(resolved);
+    const out: string[] = [];
+    for (const name of names) {
+      if (name.endsWith(".pem") || name.endsWith(".crt")) {
+        const full = path.join(resolved, name);
+        const content = fs.readFileSync(full, "utf8");
+        out.push(...parsePemCerts(content));
+      }
+    }
+    return out;
+  }
+  return [];
+}
+
+/**
+ * Build an https.Agent for wss:// connections when custom CA or loopback insecure TLS is needed.
+ * Returns undefined for ws:// or when default TLS verification should be used.
+ */
+function buildWssAgent(
+  parsedUrl: URL,
+  config: Record<string, unknown>,
+  onLog: AdapterExecutionContext["onLog"],
+): https.Agent | undefined {
+  if (parsedUrl.protocol !== "wss:") return undefined;
+
+  const tlsCaPath = nonEmpty(asString(config.tlsCaPath, "").trim());
+  const tlsCaPem = nonEmpty(asString(config.tlsCaPem, "").trim());
+  const allowInsecureTls = parseBoolean(config.allowInsecureTls, false);
+
+  if (allowInsecureTls) {
+    void onLog("stdout", "[openclaw-gateway] TLS: allowInsecureTls enabled (skip certificate verification)\n");
+    return new https.Agent({ rejectUnauthorized: false });
+  }
+
+  const caList: string[] = [];
+  if (tlsCaPath) {
+    try {
+      const fromPath = loadCaFromPath(tlsCaPath);
+      caList.push(...fromPath);
+      void onLog("stdout", "[openclaw-gateway] TLS: using custom CA (path)\n");
+    } catch (err) {
+      void onLog("stderr", `[openclaw-gateway] TLS: failed to load CA from path: ${err instanceof Error ? err.message : String(err)}\n`);
+      return undefined;
+    }
+  }
+  if (tlsCaPem) {
+    caList.push(...parsePemCerts(tlsCaPem));
+    void onLog("stdout", "[openclaw-gateway] TLS: using custom CA (inline)\n");
+  }
+
+  if (caList.length > 0) {
+    return new https.Agent({ ca: caList });
+  }
+
+  if (isLoopbackHost(parsedUrl.hostname)) {
+    void onLog("stdout", "[openclaw-gateway] TLS: loopback host, accepting any certificate for this connection\n");
+    return new https.Agent({ rejectUnauthorized: false });
+  }
+
+  return undefined;
 }
 
 function toStringRecord(value: unknown): Record<string, string> {
@@ -297,7 +383,7 @@ function buildWakePayload(ctx: AdapterExecutionContext): WakePayload {
   };
 }
 
-function resolvePaperclipApiUrlOverride(value: unknown): string | null {
+function resolveSquadronApiUrlOverride(value: unknown): string | null {
   const raw = nonEmpty(value);
   if (!raw) return null;
   try {
@@ -310,14 +396,14 @@ function resolvePaperclipApiUrlOverride(value: unknown): string | null {
 }
 
 function buildPaperclipEnvForWake(ctx: AdapterExecutionContext, wakePayload: WakePayload): Record<string, string> {
-  const paperclipApiUrlOverride = resolvePaperclipApiUrlOverride(ctx.config.paperclipApiUrl);
+  const squadronApiUrlOverride = resolveSquadronApiUrlOverride(ctx.config.squadronApiUrl);
   const paperclipEnv: Record<string, string> = {
     ...buildPaperclipEnv(ctx.agent),
     PAPERCLIP_RUN_ID: ctx.runId,
   };
 
-  if (paperclipApiUrlOverride) {
-    paperclipEnv.PAPERCLIP_API_URL = paperclipApiUrlOverride;
+  if (squadronApiUrlOverride) {
+    paperclipEnv.SQUADRON_API_URL = squadronApiUrlOverride;
   }
   if (wakePayload.taskId) paperclipEnv.PAPERCLIP_TASK_ID = wakePayload.taskId;
   if (wakePayload.wakeReason) paperclipEnv.PAPERCLIP_WAKE_REASON = wakePayload.wakeReason;
@@ -337,7 +423,7 @@ function buildWakeText(payload: WakePayload, paperclipEnv: Record<string, string
     "PAPERCLIP_RUN_ID",
     "PAPERCLIP_AGENT_ID",
     "PAPERCLIP_COMPANY_ID",
-    "PAPERCLIP_API_URL",
+    "SQUADRON_API_URL",
     "PAPERCLIP_TASK_ID",
     "PAPERCLIP_WAKE_REASON",
     "PAPERCLIP_WAKE_COMMENT_ID",
@@ -354,10 +440,10 @@ function buildWakeText(payload: WakePayload, paperclipEnv: Record<string, string
   }
 
   const issueIdHint = payload.taskId ?? payload.issueId ?? "";
-  const apiBaseHint = paperclipEnv.PAPERCLIP_API_URL ?? "<set PAPERCLIP_API_URL>";
+  const apiBaseHint = paperclipEnv.SQUADRON_API_URL ?? "<set SQUADRON_API_URL>";
 
   const lines = [
-    "Paperclip wake event for a cloud adapter.",
+    "Squadron wake event for a cloud adapter.",
     "",
     "Run this procedure now. Do not guess undocumented endpoints and do not ask for additional heartbeat docs.",
     "",
@@ -558,6 +644,7 @@ class GatewayWsClient {
     this.ws = new WebSocket(this.opts.url, {
       headers: this.opts.headers,
       maxPayload: 25 * 1024 * 1024,
+      ...(this.opts.agent ? { agent: this.opts.agent } : {}),
     });
 
     const ws = this.ws;
@@ -615,6 +702,76 @@ class GatewayWsClient {
     return hello;
   }
 
+  /**
+   * Client-first connect (Moltis): send connect immediately after open, no connect.challenge.
+   * buildConnectParams is called with null (no nonce); must return params with minProtocol/maxProtocol 4.
+   */
+  async connectClientFirst(
+    buildConnectParams: () => Record<string, unknown>,
+    timeoutMs: number,
+  ): Promise<Record<string, unknown> | null> {
+    this.ws = new WebSocket(this.opts.url, {
+      headers: this.opts.headers,
+      maxPayload: 25 * 1024 * 1024,
+      ...(this.opts.agent ? { agent: this.opts.agent } : {}),
+    });
+
+    const ws = this.ws;
+
+    // Resolve challenge so that on close we don't reject an unwaited promise (no one awaits it in client-first path).
+    this.resolveChallenge("");
+
+    ws.on("message", (data) => {
+      this.handleMessage(rawDataToString(data));
+    });
+
+    ws.on("close", (code, reason) => {
+      const reasonText = rawDataToString(reason);
+      const err = new Error(`gateway closed (${code}): ${reasonText}`);
+      this.failPending(err);
+      this.rejectChallenge(err);
+    });
+
+    ws.on("error", (err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      void this.opts.onLog("stderr", `[openclaw-gateway] websocket error: ${message}\n`);
+    });
+
+    await withTimeout(
+      new Promise<void>((resolve, reject) => {
+        const onOpen = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = (err: Error) => {
+          cleanup();
+          reject(err);
+        };
+        const onClose = (code: number, reason: Buffer) => {
+          cleanup();
+          reject(new Error(`gateway closed before open (${code}): ${rawDataToString(reason)}`));
+        };
+        const cleanup = () => {
+          ws.off("open", onOpen);
+          ws.off("error", onError);
+          ws.off("close", onClose);
+        };
+        ws.once("open", onOpen);
+        ws.once("error", onError);
+        ws.once("close", onClose);
+      }),
+      timeoutMs,
+      "gateway websocket open timeout",
+    );
+
+    const connectParams = buildConnectParams();
+    const hello = await this.request<Record<string, unknown> | null>("connect", connectParams, {
+      timeoutMs,
+    });
+
+    return hello;
+  }
+
   async request<T>(
     method: string,
     params: unknown,
@@ -656,7 +813,7 @@ class GatewayWsClient {
 
   close() {
     if (!this.ws) return;
-    this.ws.close(1000, "paperclip-complete");
+    this.ws.close(1000, "squadron-complete");
     this.ws = null;
   }
 
@@ -738,6 +895,7 @@ async function autoApproveDevicePairing(params: {
   requestId: string | null;
   deviceId: string | null;
   onLog: AdapterExecutionContext["onLog"];
+  agent?: import("node:https").Agent;
 }): Promise<{ ok: true; requestId: string } | { ok: false; reason: string }> {
   if (!params.authToken && !params.password) {
     return { ok: false, reason: "shared auth token/password is missing" };
@@ -749,6 +907,7 @@ async function autoApproveDevicePairing(params: {
     headers: params.headers,
     onEvent: () => {},
     onLog: params.onLog,
+    ...(params.agent ? { agent: params.agent } : {}),
   });
 
   try {
@@ -974,6 +1133,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     );
   }
 
+  const gatewayVariant = nonEmpty(ctx.config.gatewayVariant)?.toLowerCase() ?? "";
+  const isMoltis = gatewayVariant === "moltis";
+  if (isMoltis) {
+    await ctx.onLog("stdout", "[openclaw-gateway] Moltis handshake (client-first, protocol 4)\n");
+  }
+
   const autoPairOnFirstConnect = parseBoolean(ctx.config.autoPairOnFirstConnect, true);
   let autoPairAttempted = false;
   let latestResultPayload: unknown = null;
@@ -1032,11 +1197,13 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       }
     };
 
+    const wssAgent = buildWssAgent(parsedUrl, ctx.config, ctx.onLog);
     const client = new GatewayWsClient({
       url: parsedUrl.toString(),
       headers,
       onEvent,
       onLog: ctx.onLog,
+      ...(wssAgent ? { agent: wssAgent } : {}),
     });
 
     try {
@@ -1052,57 +1219,87 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
       await ctx.onLog("stdout", `[openclaw-gateway] connecting to ${parsedUrl.toString()}\n`);
 
-      const hello = await client.connect((nonce) => {
-        const signedAtMs = Date.now();
-        const connectParams: Record<string, unknown> = {
-          minProtocol: PROTOCOL_VERSION,
-          maxProtocol: PROTOCOL_VERSION,
-          client: {
-            id: clientId,
-            version: clientVersion,
-            platform: process.platform,
-            ...(deviceFamily ? { deviceFamily } : {}),
-            mode: clientMode,
-          },
-          role,
-          scopes,
-          auth:
-            authToken || password || deviceToken
-              ? {
-                  ...(authToken ? { token: authToken } : {}),
-                  ...(deviceToken ? { deviceToken } : {}),
-                  ...(password ? { password } : {}),
-                }
-              : undefined,
-        };
+      let hello: Record<string, unknown> | null;
 
-        if (deviceIdentity) {
-          const payload = buildDeviceAuthPayloadV3({
-            deviceId: deviceIdentity.deviceId,
-            clientId,
-            clientMode,
+      if (isMoltis) {
+        hello = await client.connectClientFirst(() => {
+          const connectParams: Record<string, unknown> = {
+            minProtocol: PROTOCOL_VERSION_MOLTIS,
+            maxProtocol: PROTOCOL_VERSION_MOLTIS,
+            client: {
+              id: clientId,
+              version: clientVersion,
+              platform: process.platform,
+              ...(deviceFamily ? { deviceFamily } : {}),
+              mode: clientMode,
+            },
             role,
             scopes,
-            signedAtMs,
-            token: authToken,
-            nonce,
-            platform: process.platform,
-            deviceFamily,
-          });
-          connectParams.device = {
-            id: deviceIdentity.deviceId,
-            publicKey: deviceIdentity.publicKeyRawBase64Url,
-            signature: signDevicePayload(deviceIdentity.privateKeyPem, payload),
-            signedAt: signedAtMs,
-            nonce,
+            auth:
+              authToken || password || deviceToken
+                ? {
+                    ...(authToken ? { token: authToken } : {}),
+                    ...(deviceToken ? { deviceToken } : {}),
+                    ...(password ? { password } : {}),
+                  }
+                : undefined,
           };
-        }
-        return connectParams;
-      }, connectTimeoutMs);
+          return connectParams;
+        }, connectTimeoutMs);
+      } else {
+        hello = await client.connect((nonce) => {
+          const signedAtMs = Date.now();
+          const connectParams: Record<string, unknown> = {
+            minProtocol: PROTOCOL_VERSION,
+            maxProtocol: PROTOCOL_VERSION,
+            client: {
+              id: clientId,
+              version: clientVersion,
+              platform: process.platform,
+              ...(deviceFamily ? { deviceFamily } : {}),
+              mode: clientMode,
+            },
+            role,
+            scopes,
+            auth:
+              authToken || password || deviceToken
+                ? {
+                    ...(authToken ? { token: authToken } : {}),
+                    ...(deviceToken ? { deviceToken } : {}),
+                    ...(password ? { password } : {}),
+                  }
+                : undefined,
+          };
 
+          if (deviceIdentity) {
+            const payload = buildDeviceAuthPayloadV3({
+              deviceId: deviceIdentity.deviceId,
+              clientId,
+              clientMode,
+              role,
+              scopes,
+              signedAtMs,
+              token: authToken,
+              nonce,
+              platform: process.platform,
+              deviceFamily,
+            });
+            connectParams.device = {
+              id: deviceIdentity.deviceId,
+              publicKey: deviceIdentity.publicKeyRawBase64Url,
+              signature: signDevicePayload(deviceIdentity.privateKeyPem, payload),
+              signedAt: signedAtMs,
+              nonce,
+            };
+          }
+          return connectParams;
+        }, connectTimeoutMs);
+      }
+
+      const expectedProtocol = isMoltis ? PROTOCOL_VERSION_MOLTIS : PROTOCOL_VERSION;
       await ctx.onLog(
         "stdout",
-        `[openclaw-gateway] connected protocol=${asNumber(asRecord(hello)?.protocol, PROTOCOL_VERSION)}\n`,
+        `[openclaw-gateway] connected protocol=${asNumber(asRecord(hello)?.protocol, expectedProtocol)}\n`,
       );
 
       const acceptedPayload = await client.request<Record<string, unknown>>("agent", agentParams, {
@@ -1239,6 +1436,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
           requestId: extractPairingRequestId(err),
           deviceId: deviceIdentity?.deviceId ?? null,
           onLog: ctx.onLog,
+          ...(wssAgent ? { agent: wssAgent } : {}),
         });
         if (pairResult.ok) {
           await ctx.onLog(
@@ -1253,22 +1451,31 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
         );
       }
 
+      const agentNotConfigured = lower.includes("agent service not configured");
       const detailedMessage = pairingRequired
         ? `${message}. Approve the pending device in OpenClaw (for example: openclaw devices approve --latest --url <gateway-ws-url> --token <gateway-token>) and retry. Ensure this agent has a persisted adapterConfig.devicePrivateKeyPem so approvals are reused.`
-        : message;
+        : agentNotConfigured
+          ? `${message}. Configure and start the agent service in the Moltis gateway (see Moltis docs).`
+          : message;
 
       await ctx.onLog("stderr", `[openclaw-gateway] request failed: ${detailedMessage}\n`);
+
+      const errorCode = timedOut
+        ? "openclaw_gateway_timeout"
+        : pairingRequired
+          ? "openclaw_gateway_pairing_required"
+          : agentNotConfigured
+            ? "openclaw_gateway_agent_not_configured"
+            : isMoltis
+              ? "openclaw_gateway_moltis_protocol_error"
+              : "openclaw_gateway_request_failed";
 
       return {
         exitCode: 1,
         signal: null,
         timedOut,
         errorMessage: detailedMessage,
-        errorCode: timedOut
-          ? "openclaw_gateway_timeout"
-          : pairingRequired
-            ? "openclaw_gateway_pairing_required"
-            : "openclaw_gateway_request_failed",
+        errorCode,
         resultJson: asRecord(latestResultPayload),
       };
     } finally {

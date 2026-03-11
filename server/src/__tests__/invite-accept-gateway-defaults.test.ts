@@ -116,4 +116,27 @@ describe("normalizeAgentDefaultsForJoin (openclaw_gateway)", () => {
     expect(normalized.normalized?.disableDeviceAuth).toBe(true);
     expect(normalized.normalized?.devicePrivateKeyPem).toBeUndefined();
   });
+
+  it("Moltis: does not require device key when gatewayVariant=moltis", () => {
+    const normalized = normalizeAgentDefaultsForJoin({
+      adapterType: "openclaw_gateway",
+      defaultsPayload: {
+        url: "ws://127.0.0.1:9999/ws/chat",
+        gatewayVariant: "moltis",
+        headers: {
+          "x-openclaw-token": "gateway-token-moltis-123456789012",
+        },
+      },
+      deploymentMode: "authenticated",
+      deploymentExposure: "private",
+      bindHost: "127.0.0.1",
+      allowedHostnames: [],
+    });
+
+    expect(normalized.fatalErrors).toEqual([]);
+    expect(normalized.normalized?.gatewayVariant).toBe("moltis");
+    expect(normalized.normalized?.url).toBe("ws://127.0.0.1:9999/ws/chat");
+    expect(normalized.normalized?.devicePrivateKeyPem).toBeUndefined();
+    expect(normalized.diagnostics.some((d) => d.code === "openclaw_gateway_moltis_no_device_auth")).toBe(true);
+  });
 });

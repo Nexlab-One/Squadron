@@ -155,7 +155,7 @@ npm view paperclipai@canary version
 The user install path is:
 
 ```bash
-npx paperclipai@canary onboard
+npx squadron onboard
 ```
 
 ## Step 5 — Smoke Test the Canary

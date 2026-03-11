@@ -79,8 +79,8 @@ They are published under the npm dist-tag `canary`.
 
 This means:
 
-- `npx paperclipai@canary onboard` can install them explicitly
-- `npx paperclipai onboard` continues to resolve `latest`
+- `npx squadron@canary onboard` can install them explicitly
+- `npx squadron onboard` continues to resolve `latest`
 - the stable changelog can stay at `releases/v1.2.3.md`
 
 ## Stable packaging model

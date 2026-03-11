@@ -50,7 +50,7 @@ This runs dev as `authenticated/private` and binds the server to `0.0.0.0` for p
 Allow additional private hostnames (for example custom Tailscale hostnames):
 
 ```sh
-pnpm paperclipai allowed-hostname dotta-macbook-pro
+pnpm squadron allowed-hostname dotta-macbook-pro
 ```
 
 ## One-Command Local Run
@@ -58,13 +58,13 @@ pnpm paperclipai allowed-hostname dotta-macbook-pro
 For a first-time local install, you can bootstrap and run in one command:
 
 ```sh
-pnpm paperclipai run
+pnpm squadron run
 ```
 
-`paperclipai run` does:
+`squadron run` does:
 
 1. auto-onboard if config is missing
-2. `paperclipai doctor` with repair enabled
+2. `squadron doctor` with repair enabled
 3. starts the server when checks pass
 
 ## Docker Quickstart (No local Node install)
@@ -101,7 +101,7 @@ Squadron is a fork of Paperclip; the default data directory was changed from `~/
 Override home and instance:
 
 ```sh
-PAPERCLIP_HOME=/custom/path PAPERCLIP_INSTANCE_ID=dev pnpm paperclipai run
+PAPERCLIP_HOME=/custom/path PAPERCLIP_INSTANCE_ID=dev pnpm squadron run
 ```
 
 No Docker or external database is required for this mode.
@@ -120,7 +120,7 @@ For local development, the default storage provider is `local_disk`, which persi
 Configure storage provider/settings:
 
 ```sh
-pnpm paperclipai configure --section storage
+pnpm squadron configure --section storage
 ```
 
 ## Default Agent Workspaces
@@ -177,13 +177,13 @@ Squadron can run automatic DB backups on a timer. Defaults:
 Configure these in:
 
 ```sh
-pnpm paperclipai configure --section database
+pnpm squadron configure --section database
 ```
 
 Run a one-off backup manually:
 
 ```sh
-pnpm paperclipai db:backup
+pnpm squadron db:backup
 # or:
 pnpm db:backup
 ```
@@ -213,9 +213,9 @@ When strict mode is enabled, sensitive env keys (for example `*_API_KEY`, `*_TOK
 
 CLI configuration support:
 
-- `pnpm paperclipai onboard` writes a default `secrets` config section (`local_encrypted`, strict mode off, key file path set) and creates a local key file when needed.
-- `pnpm paperclipai configure --section secrets` lets you update provider/strict mode/key path and creates the local key file when needed.
-- `pnpm paperclipai doctor` validates secrets adapter configuration and can create a missing local key file with `--repair`.
+- `pnpm squadron onboard` writes a default `secrets` config section (`local_encrypted`, strict mode off, key file path set) and creates a local key file when needed.
+- `pnpm squadron configure --section secrets` lets you update provider/strict mode/key path and creates the local key file when needed.
+- `pnpm squadron doctor` validates secrets adapter configuration and can create a missing local key file with `--repair`.
 
 Migration helper for existing inline env secrets:
 
@@ -239,27 +239,27 @@ Default behavior:
 
 ## CLI Client Operations
 
-Squadron CLI (invoked as `paperclipai`) includes client-side control-plane commands in addition to setup commands.
+Squadron CLI (invoked as `squadron`) includes client-side control-plane commands in addition to setup commands.
 
 Quick examples:
 
 ```sh
-pnpm paperclipai issue list --company-id <company-id>
-pnpm paperclipai issue create --company-id <company-id> --title "Investigate checkout conflict"
-pnpm paperclipai issue update <issue-id> --status in_progress --comment "Started triage"
+pnpm squadron issue list --company-id <company-id>
+pnpm squadron issue create --company-id <company-id> --title "Investigate checkout conflict"
+pnpm squadron issue update <issue-id> --status in_progress --comment "Started triage"
 ```
 
 Set defaults once with context profiles:
 
 ```sh
-pnpm paperclipai context set --api-base http://localhost:3100 --company-id <company-id>
+pnpm squadron context set --api-base http://localhost:3100 --company-id <company-id>
 ```
 
 Then run commands without repeating flags:
 
 ```sh
-pnpm paperclipai issue list
-pnpm paperclipai dashboard get
+pnpm squadron issue list
+pnpm squadron dashboard get
 ```
 
 See full command reference in `doc/CLI.md`.
@@ -335,7 +335,7 @@ Networking behavior for this smoke script:
 
 - auto-detects and prints a Paperclip host URL reachable from inside OpenClaw Docker
 - default container-side host alias is `host.docker.internal` (override with `PAPERCLIP_HOST_FROM_CONTAINER` / `PAPERCLIP_HOST_PORT`)
-- if Squadron rejects container hostnames in authenticated/private mode, allow `host.docker.internal` via `pnpm paperclipai allowed-hostname host.docker.internal` and restart the server
+- if Squadron rejects container hostnames in authenticated/private mode, allow `host.docker.internal` via `pnpm squadron allowed-hostname host.docker.internal` and restart the server
 
 ## Syncing with upstream Paperclip
 

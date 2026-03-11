@@ -68,10 +68,14 @@ function renderPaperclipEnvNote(env: Record<string, string>): string {
   const paperclipKeys = Object.keys(env)
     .filter((key) => key.startsWith("PAPERCLIP_"))
     .sort();
-  if (paperclipKeys.length === 0) return "";
+  const squadronKeys = Object.keys(env)
+    .filter((key) => key.startsWith("SQUADRON_"))
+    .sort();
+  const allKeys = [...paperclipKeys, ...squadronKeys];
+  if (allKeys.length === 0) return "";
   return [
     "Paperclip runtime note:",
-    `The following PAPERCLIP_* environment variables are available in this run: ${paperclipKeys.join(", ")}`,
+    `The following environment variables are available in this run: ${allKeys.join(", ")}`,
     "Do not assume these variables are missing without checking your shell environment.",
     "",
     "",

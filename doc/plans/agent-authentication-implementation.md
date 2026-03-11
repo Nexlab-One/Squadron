@@ -55,7 +55,7 @@
 - Continue injecting:
   - `PAPERCLIP_AGENT_ID`
   - `PAPERCLIP_COMPANY_ID`
-  - `PAPERCLIP_API_URL`
+  - `SQUADRON_API_URL`
 
 ## 5) Documentation updates
 

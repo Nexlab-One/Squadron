@@ -658,6 +658,7 @@ export function AgentDetail() {
           onSaveActionChange={setSaveConfigAction}
           onCancelActionChange={setCancelConfigAction}
           onSavingChange={setConfigSaving}
+          onConfigSaveError={setActionError}
           updatePermissions={updatePermissions}
         />
       )}
@@ -1066,6 +1067,7 @@ function AgentConfigurePage({
   onSaveActionChange,
   onCancelActionChange,
   onSavingChange,
+  onConfigSaveError,
   updatePermissions,
 }: {
   agent: Agent;
@@ -1075,6 +1077,7 @@ function AgentConfigurePage({
   onSaveActionChange: (save: (() => void) | null) => void;
   onCancelActionChange: (cancel: (() => void) | null) => void;
   onSavingChange: (saving: boolean) => void;
+  onConfigSaveError: (message: string | null) => void;
   updatePermissions: { mutate: (canCreate: boolean) => void; isPending: boolean };
 }) {
   const queryClient = useQueryClient();
@@ -1102,6 +1105,7 @@ function AgentConfigurePage({
         onSaveActionChange={onSaveActionChange}
         onCancelActionChange={onCancelActionChange}
         onSavingChange={onSavingChange}
+        onConfigSaveError={onConfigSaveError}
         updatePermissions={updatePermissions}
         companyId={companyId}
       />
@@ -1173,6 +1177,7 @@ function ConfigurationTab({
   onSaveActionChange,
   onCancelActionChange,
   onSavingChange,
+  onConfigSaveError,
   updatePermissions,
 }: {
   agent: Agent;
@@ -1181,6 +1186,7 @@ function ConfigurationTab({
   onSaveActionChange: (save: (() => void) | null) => void;
   onCancelActionChange: (cancel: (() => void) | null) => void;
   onSavingChange: (saving: boolean) => void;
+  onConfigSaveError: (message: string | null) => void;
   updatePermissions: { mutate: (canCreate: boolean) => void; isPending: boolean };
 }) {
   const queryClient = useQueryClient();
@@ -1197,9 +1203,13 @@ function ConfigurationTab({
   const updateAgent = useMutation({
     mutationFn: (data: Record<string, unknown>) => agentsApi.update(agent.id, data, companyId),
     onSuccess: () => {
+      onConfigSaveError(null);
       queryClient.invalidateQueries({ queryKey: queryKeys.agents.detail(agent.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.agents.detail(agent.urlKey) });
       queryClient.invalidateQueries({ queryKey: queryKeys.agents.configRevisions(agent.id) });
+    },
+    onError: (err) => {
+      onConfigSaveError(err instanceof Error ? err.message : "Failed to save agent");
     },
   });
 
@@ -1706,6 +1716,16 @@ function RunDetail({ run, agentRouteId, adapterType }: { run: HeartbeatRun; agen
                 {run.errorCode && <span className="text-muted-foreground ml-1">({run.errorCode})</span>}
               </div>
             )}
+            {(run.errorCode === "openclaw_gateway_agent_not_configured" ||
+              (run.errorCode === "openclaw_gateway_moltis_protocol_error" &&
+                typeof run.error === "string" &&
+                run.error.toLowerCase().includes("agent service not configured"))) &&
+              adapterType === "openclaw_gateway" && (
+                <p className="text-xs text-muted-foreground">
+                  Configure and start the agent service in the Moltis gateway. See{" "}
+                  <code className="text-foreground">doc/MOLTIS_ONBOARDING.md</code> → Troubleshooting. If you use a pre-built Moltis binary, try building from source with default features.
+                </p>
+              )}
             {run.errorCode === "claude_auth_required" && adapterType === "claude_local" && (
               <div className="space-y-2">
                 <Button

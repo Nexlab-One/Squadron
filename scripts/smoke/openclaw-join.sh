@@ -10,8 +10,8 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
-PAPERCLIP_API_URL="${PAPERCLIP_API_URL:-http://localhost:3100}"
-API_BASE="${PAPERCLIP_API_URL%/}/api"
+SQUADRON_API_URL="${SQUADRON_API_URL:-http://localhost:3100}"
+API_BASE="${SQUADRON_API_URL%/}/api"
 COMPANY_ID="${COMPANY_ID:-${PAPERCLIP_COMPANY_ID:-}}"
 OPENCLAW_AGENT_NAME="${OPENCLAW_AGENT_NAME:-OpenClaw Smoke Agent}"
 OPENCLAW_WEBHOOK_URL="${OPENCLAW_WEBHOOK_URL:-}"
@@ -75,7 +75,7 @@ api_request() {
   if [[ "$path" == http://* || "$path" == https://* ]]; then
     url="$path"
   elif [[ "$path" == /api/* ]]; then
-    url="${PAPERCLIP_API_URL%/}${path}"
+    url="${SQUADRON_API_URL%/}${path}"
   else
     url="${API_BASE}${path}"
   fi

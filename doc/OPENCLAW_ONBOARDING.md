@@ -91,4 +91,8 @@ docker compose -f /tmp/openclaw-docker/docker-compose.yml -f /tmp/openclaw-docke
 - Case B: `done` + marker comment + main-chat message visible.
 - Case C: original task done and new issue created from `/new` session.
 
+## Using Moltis
+
+To onboard an agent that uses a Moltis gateway (client-first handshake, protocol 4) instead of OpenClaw: use the same invite/join/approve/claim flow with `adapterType: "openclaw_gateway"` and `agentDefaultsPayload.gatewayVariant: "moltis"`. Device key is not required. See [doc/MOLTIS_ONBOARDING.md](MOLTIS_ONBOARDING.md) for operator steps and one-liner.
+
 If you want, I can also give you a single “observer mode” command that runs the stock smoke harness while you watch the same steps live in UI.

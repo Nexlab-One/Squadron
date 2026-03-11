@@ -90,6 +90,7 @@ export const accessApi = {
     companyId: string,
     input: {
       agentMessage?: string | null;
+      gatewayVariant?: "moltis";
     } = {},
   ) =>
     api.post<CompanyInviteCreated>(

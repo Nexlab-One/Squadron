@@ -39,7 +39,7 @@ import {
   listServerAdapters,
   validateAdapterConfig,
 } from "../adapters/index.js";
-import { redactEventPayload } from "../redaction.js";
+import { REDACTED_EVENT_VALUE, redactEventPayload } from "../redaction.js";
 import { runClaudeLogin } from "@paperclipai/adapter-claude-local/server";
 import {
   DEFAULT_CODEX_LOCAL_BYPASS_APPROVALS_AND_SANDBOX,
@@ -189,6 +189,37 @@ export function agentRoutes(db: Db) {
   function asRecord(value: unknown): Record<string, unknown> | null {
     if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
     return value as Record<string, unknown>;
+  }
+
+  /** Merge patch adapterConfig with existing; replace redacted env placeholders with stored values so PATCH does not persist ***REDACTED***. */
+  function mergeAdapterConfigPreservingExistingEnv(
+    existing: Record<string, unknown> | null,
+    patch: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const merged = { ...patch };
+    const existingEnv = asRecord(existing?.env);
+    const patchEnv = asRecord(patch.env);
+    if (!patchEnv) return merged;
+    const mergedEnv: Record<string, unknown> = existingEnv ? { ...existingEnv } : {};
+    for (const [key, patchBinding] of Object.entries(patchEnv)) {
+      const binding = patchBinding as Record<string, unknown> | null;
+      const isRedacted =
+        binding &&
+        typeof binding === "object" &&
+        "value" in binding &&
+        binding.value === REDACTED_EVENT_VALUE;
+      if (isRedacted) {
+        if (existingEnv && key in existingEnv) {
+          mergedEnv[key] = existingEnv[key];
+        } else {
+          delete mergedEnv[key];
+        }
+      } else {
+        mergedEnv[key] = patchBinding;
+      }
+    }
+    merged.env = mergedEnv;
+    return merged;
   }
 
   function asNonEmptyString(value: unknown): string | null {
@@ -1091,7 +1122,10 @@ export function agentRoutes(db: Db) {
     if (touchesAdapterConfiguration) {
       assertAdapterTypeAllowed(requestedAdapterType);
       const rawEffectiveAdapterConfig = Object.prototype.hasOwnProperty.call(patchData, "adapterConfig")
-        ? (asRecord(patchData.adapterConfig) ?? {})
+        ? mergeAdapterConfigPreservingExistingEnv(
+            asRecord(existing.adapterConfig) ?? null,
+            asRecord(patchData.adapterConfig) ?? {},
+          )
         : (asRecord(existing.adapterConfig) ?? {});
       const effectiveAdapterConfig = applyCreateDefaultsByAdapterType(
         requestedAdapterType,

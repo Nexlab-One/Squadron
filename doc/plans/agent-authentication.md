@@ -45,7 +45,7 @@ accepts it back on API requests.
   signature.
 
 **Status:** Partially implemented. The local adapter already passes
-`PAPERCLIP_API_URL`, `PAPERCLIP_AGENT_ID`, `PAPERCLIP_COMPANY_ID`. We need to
+`SQUADRON_API_URL`, `PAPERCLIP_AGENT_ID`, `PAPERCLIP_COMPANY_ID`. We need to
 add a `PAPERCLIP_API_KEY` (JWT) to the set of injected env vars.
 
 ### Tier 2: CLI-Driven Key Exchange
@@ -203,7 +203,7 @@ On approval, the approver sets:
 | **P1**   | Invite link + onboarding endpoint | `POST /api/companies/:id/invites`, `GET /api/invite/:token`, `POST /api/invite/:token/register`. |
 | **P1**   | Approval flow                     | UI + API for reviewing and approving pending agent registrations.                                |
 | **P2**   | OpenClaw integration              | First real external agent onboarding via invite link.                                            |
-| **P3**   | CLI auth flow                     | `paperclipai auth login` for developer-managed remote agents.                                      |
+| **P3**   | CLI auth flow                     | `squadron auth login` for developer-managed remote agents.                                      |
 
 ## P0 Implementation Plan
 
