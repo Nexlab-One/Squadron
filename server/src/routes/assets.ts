@@ -43,7 +43,7 @@ export function assetRoutes(db: Db, storage: StorageService) {
     } catch (err) {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
-          res.status(422).json({ error: `Image exceeds ${MAX_ASSET_IMAGE_BYTES} bytes` });
+          res.status(422).json({ error: `File exceeds ${MAX_ASSET_IMAGE_BYTES} bytes` });
           return;
         }
         res.status(400).json({ error: err.message });
@@ -60,7 +60,7 @@ export function assetRoutes(db: Db, storage: StorageService) {
 
     const contentType = (file.mimetype || "").toLowerCase();
     if (!ALLOWED_IMAGE_CONTENT_TYPES.has(contentType)) {
-      res.status(422).json({ error: `Unsupported image type: ${contentType || "unknown"}` });
+      res.status(422).json({ error: `Unsupported file type: ${contentType || "unknown"}` });
       return;
     }
     if (file.buffer.length <= 0) {

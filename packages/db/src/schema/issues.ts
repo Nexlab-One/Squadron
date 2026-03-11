@@ -42,6 +42,7 @@ export const issues = pgTable(
     billingCode: text("billing_code"),
     requiresQualityReview: boolean("requires_quality_review"),
     assigneeAdapterOverrides: jsonb("assignee_adapter_overrides").$type<Record<string, unknown>>(),
+    executionWorkspaceSettings: jsonb("execution_workspace_settings").$type<Record<string, unknown>>(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

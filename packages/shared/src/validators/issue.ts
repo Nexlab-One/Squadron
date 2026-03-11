@@ -1,6 +1,25 @@
 import { z } from "zod";
 import { ISSUE_PRIORITIES, ISSUE_STATUSES } from "../constants.js";
 
+const executionWorkspaceStrategySchema = z
+  .object({
+    type: z.enum(["project_primary", "git_worktree"]).optional(),
+    baseRef: z.string().optional().nullable(),
+    branchTemplate: z.string().optional().nullable(),
+    worktreeParentDir: z.string().optional().nullable(),
+    provisionCommand: z.string().optional().nullable(),
+    teardownCommand: z.string().optional().nullable(),
+  })
+  .strict();
+
+export const issueExecutionWorkspaceSettingsSchema = z
+  .object({
+    mode: z.enum(["inherit", "project_primary", "isolated", "agent_default"]).optional(),
+    workspaceStrategy: executionWorkspaceStrategySchema.optional().nullable(),
+    workspaceRuntime: z.record(z.string(), z.unknown()).optional().nullable(),
+  })
+  .strict();
+
 export const issueAssigneeAdapterOverridesSchema = z
   .object({
     adapterConfig: z.record(z.string(), z.unknown()).optional(),
@@ -22,6 +41,7 @@ export const createIssueSchema = z.object({
   billingCode: z.string().optional().nullable(),
   requiresQualityReview: z.boolean().optional().nullable(),
   assigneeAdapterOverrides: issueAssigneeAdapterOverridesSchema.optional().nullable(),
+  executionWorkspaceSettings: issueExecutionWorkspaceSettingsSchema.optional().nullable(),
   labelIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -41,6 +61,7 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
 });
 
 export type UpdateIssue = z.infer<typeof updateIssueSchema>;
+export type IssueExecutionWorkspaceSettings = z.infer<typeof issueExecutionWorkspaceSettingsSchema>;
 
 export const checkoutIssueSchema = z.object({
   agentId: z.string().uuid(),

@@ -46,12 +46,14 @@ import {
   DEFAULT_CODEX_LOCAL_MODEL,
 } from "@paperclipai/adapter-codex-local";
 import { DEFAULT_CURSOR_LOCAL_MODEL } from "@paperclipai/adapter-cursor-local";
+import { DEFAULT_GEMINI_LOCAL_MODEL } from "@paperclipai/adapter-gemini-local";
 import { ensureOpenCodeModelConfiguredAndAvailable } from "@paperclipai/adapter-opencode-local/server";
 
 export function agentRoutes(db: Db) {
   const DEFAULT_INSTRUCTIONS_PATH_KEYS: Record<string, string> = {
     claude_local: "instructionsFilePath",
     codex_local: "instructionsFilePath",
+    gemini_local: "instructionsFilePath",
     opencode_local: "instructionsFilePath",
     cursor: "instructionsFilePath",
   };
@@ -277,6 +279,10 @@ export function agentRoutes(db: Db) {
       if (!hasBypassFlag) {
         next.dangerouslyBypassApprovalsAndSandbox = DEFAULT_CODEX_LOCAL_BYPASS_APPROVALS_AND_SANDBOX;
       }
+      return ensureGatewayDeviceKey(adapterType, next);
+    }
+    if (adapterType === "gemini_local" && !asNonEmptyString(next.model)) {
+      next.model = DEFAULT_GEMINI_LOCAL_MODEL;
       return ensureGatewayDeviceKey(adapterType, next);
     }
     // OpenCode requires explicit model selection — no default
@@ -1539,6 +1545,17 @@ export function agentRoutes(db: Db) {
     }
     await heartbeat.touchRun(runId);
     res.status(204).send();
+  });
+
+  router.get("/heartbeat-runs/:runId", async (req, res) => {
+    const runId = req.params.runId as string;
+    const run = await heartbeat.getRun(runId);
+    if (!run) {
+      res.status(404).json({ error: "Heartbeat run not found" });
+      return;
+    }
+    assertCompanyAccess(req, run.companyId);
+    res.json(run);
   });
 
   router.post("/heartbeat-runs/:runId/cancel", async (req, res) => {
