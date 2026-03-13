@@ -982,7 +982,6 @@ export function Inbox() {
                 );
               })}
             </div>
-          </div>
         </>
       )}
     </div>

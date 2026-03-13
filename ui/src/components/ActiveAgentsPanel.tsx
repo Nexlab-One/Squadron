@@ -93,7 +93,7 @@ function AgentRunCard({
     <div className={cn(
       "flex h-[320px] flex-col overflow-hidden rounded-xl border shadow-sm",
       isActive
-        ? "border-cyan-500/25 bg-cyan-500/[0.04] shadow-[0_16px_40px_rgba(6,182,212,0.08)]"
+        ? "border-cyan-500/25 bg-cyan-500/4 shadow-[0_16px_40px_rgba(6,182,212,0.08)]"
         : "border-border bg-background/70",
     )}>
       <div className="border-b border-border/60 px-3 py-3">
@@ -108,7 +108,7 @@ function AgentRunCard({
               ) : (
                 <span className="inline-flex h-2.5 w-2.5 rounded-full bg-muted-foreground/35" />
               )}
-              <Identity name={run.agentName} size="sm" className="[&>span:last-child]:!text-[11px]" />
+              <Identity name={run.agentName} size="sm" className="[&>span:last-child]:text-[11px]!" />
             </div>
             <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
               <span>{isActive ? "Live now" : run.finishedAt ? `Finished ${relativeTime(run.finishedAt)}` : `Started ${relativeTime(run.createdAt)}`}</span>
