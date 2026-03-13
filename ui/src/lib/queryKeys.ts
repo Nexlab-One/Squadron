@@ -60,6 +60,9 @@ export const queryKeys = {
   auth: {
     session: ["auth", "session"] as const,
   },
+  instance: {
+    schedulerHeartbeats: ["instance", "scheduler-heartbeats"] as const,
+  },
   health: ["health"] as const,
   releases: {
     check: ["releases", "check"] as const,

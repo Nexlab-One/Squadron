@@ -2,9 +2,17 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { approvalComments, approvals } from "@paperclipai/db";
 import { notFound, unprocessable } from "../errors.js";
+import { redactCurrentUserText } from "../log-redaction.js";
 import { agentService } from "./agents.js";
 import { notifyHireApproved } from "./hire-hook.js";
 import type { secretService } from "./secrets.js";
+
+function redactApprovalComment<T extends { body: string }>(comment: T): T {
+  return {
+    ...comment,
+    body: redactCurrentUserText(comment.body),
+  };
+}
 
 export type ApprovalServiceAdapterDeps = {
   secretService: ReturnType<typeof secretService>;
@@ -243,7 +251,8 @@ export function approvalService(db: Db, deps?: ApprovalServiceAdapterDeps) {
             eq(approvalComments.companyId, existing.companyId),
           ),
         )
-        .orderBy(asc(approvalComments.createdAt));
+        .orderBy(asc(approvalComments.createdAt))
+        .then((comments) => comments.map(redactApprovalComment));
     },
 
     addComment: async (
@@ -252,6 +261,7 @@ export function approvalService(db: Db, deps?: ApprovalServiceAdapterDeps) {
       actor: { agentId?: string; userId?: string },
     ) => {
       const existing = await getExistingApproval(approvalId);
+      const redactedBody = redactCurrentUserText(body);
       return db
         .insert(approvalComments)
         .values({
@@ -259,10 +269,10 @@ export function approvalService(db: Db, deps?: ApprovalServiceAdapterDeps) {
           approvalId,
           authorAgentId: actor.agentId ?? null,
           authorUserId: actor.userId ?? null,
-          body,
+          body: redactedBody,
         })
         .returning()
-        .then((rows) => rows[0]);
+        .then((rows) => redactApprovalComment(rows[0]));
     },
   };
 }

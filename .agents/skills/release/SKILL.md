@@ -35,12 +35,13 @@ Use this skill when leadership asks for:
 
 Before proceeding, verify all of the following:
 
-1. `skills/release-changelog/SKILL.md` exists and is usable.
-2. The `release-changelog` dependency work is complete/reviewed before running this flow.
-3. App repo working tree is clean.
-4. There are commits since the last release tag.
-5. You have release permissions (`npm whoami` succeeds for real publish).
-6. If running via Squadron, you have issue context for posting status updates.
+1. `.agents/skills/release-changelog/SKILL.md` exists and is usable.
+2. The repo working tree is clean, including untracked files.
+3. There are commits since the last stable tag.
+4. The release SHA has passed the verification gate or is about to.
+5. If package manifests changed, the CI-owned `pnpm-lock.yaml` refresh is already merged on `master` before the release branch is cut.
+6. You have release permissions (`npm whoami` succeeds for real publish) or the GitHub release workflow is being used with trusted publishing.
+7. If running via Squadron, you have issue context for posting status updates.
 
 If any precondition fails, stop and report the blocker.
 

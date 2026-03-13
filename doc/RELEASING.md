@@ -34,7 +34,7 @@ Use this when you want an installable prerelease without changing `latest`.
 
 # 2. Draft or update the stable changelog for the intended stable version
 VERSION=0.2.8
-claude --print --output-format stream-json --verbose --dangerously-skip-permissions --model claude-opus-4-6 "Use the release-changelog skill to draft or update releases/v${VERSION}.md for Paperclip. Read doc/RELEASING.md and skills/release-changelog/SKILL.md, then generate the stable changelog for v${VERSION} from commits since the last stable tag. Do not create a canary changelog."
+claude --print --output-format stream-json --verbose --dangerously-skip-permissions --model claude-opus-4-6 "Use the release-changelog skill to draft or update releases/v${VERSION}.md for Paperclip. Read doc/RELEASING.md and .agents/skills/release-changelog/SKILL.md, then generate the stable changelog for v${VERSION} from commits since the last stable tag. Do not create a canary changelog."
 
 # 3. Preview the canary release
 ./scripts/release.sh patch --canary --dry-run
@@ -309,7 +309,7 @@ Create or update:
 
 ```bash
 VERSION=X.Y.Z
-claude -p "Use the release-changelog skill to draft or update releases/v${VERSION}.md for Paperclip. Read doc/RELEASING.md and skills/release-changelog/SKILL.md, then generate the stable changelog for v${VERSION} from commits since the last stable tag. Do not create a canary changelog."
+claude -p "Use the release-changelog skill to draft or update releases/v${VERSION}.md for Paperclip. Read doc/RELEASING.md and .agents/skills/release-changelog/SKILL.md, then generate the stable changelog for v${VERSION} from commits since the last stable tag. Do not create a canary changelog."
 ```
 
 This is deliberate. The release notes should describe the stable story, not the canary mechanics.
@@ -524,5 +524,5 @@ Rollback procedure:
 ## Related Docs
 
 - [doc/PUBLISHING.md](PUBLISHING.md) — low-level npm build and packaging internals
-- [skills/release/SKILL.md](../skills/release/SKILL.md) — agent release coordination workflow
-- [skills/release-changelog/SKILL.md](../skills/release-changelog/SKILL.md) — stable changelog drafting workflow
+- [.agents/skills/release/SKILL.md](../.agents/skills/release/SKILL.md) — maintainer release coordination workflow
+- [.agents/.agents/skills/release-changelog/SKILL.md](../.agents/.agents/skills/release-changelog/SKILL.md) — stable changelog drafting workflow
